@@ -153,7 +153,7 @@ int on_discord_message(struct message msg) {
 }
 int onopen(wsclient *c) {
     fprintf(stderr, "onopen called: %d\n", c->sockfd);
-    json_object *response = json_tokener_parse("{\"op\":2,\"d\":{\"token\":\"\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"discordc\",\"device\":\"discordc\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}");
+    json_object *response = json_tokener_parse("{\"op\":2,\"d\":{\"token\":\"\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}");
     libwsclient_send(c, json_object_to_json_string(response));
     return 0;
 }
