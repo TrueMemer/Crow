@@ -1,7 +1,7 @@
 TARGET = discord
-LIBS = -lm -lcurl -ljson-c
+LIBS = -lm -lcurl -ljson-c -lwsclient -lpthread
 CC = gcc
-CFLAGS = -g -Wall
+CFLAGS = -g -O2
 CFLAGS += $(shell pkg-config --cflags json-c)
 LDFLAGS += $(shell pkg-config --libs json-c)
 
@@ -19,7 +19,7 @@ HEADERS = $(wildcard *.h)
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -Wall $(shell pkg-config --cflags json-c) $(LIBS) -o $@
+	$(CC) $(OBJECTS)  $(shell pkg-config --cflags json-c) $(LIBS) -o $@
 
 clean:
 	-rm -f *.o
