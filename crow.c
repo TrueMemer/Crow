@@ -7,7 +7,7 @@
 #include "crow.h"
 
 struct curl_slist *header = NULL;
-char* bot_token = "";
+char bot_token[SIZE];
 json_object *d;
 CURL *curl;
 int done = 0;
@@ -186,6 +186,14 @@ int onopen(wsclient *c) {
 }
 
 int main (int argc, char* argv[]) {
+    FILE *token_file;
+    if ((token_file = fopen("token", "r")) == NULL)
+    {
+        printf("Cant read token file or it not exists!");
+        exit(1);         
+    }
+    fscanf(token_file,"%[^\n]", bot_token);
+    fclose(token_file);
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
     if(curl) {
