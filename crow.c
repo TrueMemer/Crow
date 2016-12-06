@@ -4,42 +4,17 @@
 #include <json.h>
 #include <wsclient/wsclient.h>
 
-#define SIZE 1024
-struct string {
-    char *ptr;
-    size_t len;
-};
-struct user {
-    // TODO
-};
-struct message {
-    char* id;
-    char* channel_id;
-    struct user author;
-    char* content;
-    char* timestamp;
-    char* edited_timestamp;
-    int tts;
-    int mention_everyone;
-    /*
-    TODO:
-    mentions
-    mention_roles
-    attachments
-    embeds
-    reactions
-    nonce
-    */
-    int pinned;
-    char* webhook_id;
-};
+#include "crow.h"
+
 struct curl_slist *header = NULL;
-char * token = "Authorization: Bot ";
+char* bot_token = "";
 json_object *d;
 CURL *curl;
 int done = 0;
 int can_send_message = 0;
 int is_ready = 0;
+struct user bot;
+
 void init_string(struct string *s) {
     s->len = 0;
     s->ptr = malloc(s->len+1);
@@ -49,6 +24,7 @@ void init_string(struct string *s) {
     }
     s->ptr[0] = "";
 }
+
 size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
 {
     size_t new_len = s->len + size*nmemb;
@@ -62,15 +38,16 @@ size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
     s->len = new_len;
     return size*nmemb;
 }
+
 void send_message (char* message, char* channel_id) {
     CURLcode res;
     struct string s;
     init_string(&s);
     char target[SIZE];
-		char to_send[SIZE];
-		snprintf(target, sizeof(target), "https://discordapp.com/api/channels/%s/messages", channel_id);
+	char to_send[SIZE];
+	snprintf(target, sizeof(target), "https://discordapp.com/api/channels/%s/messages", channel_id);
     snprintf(to_send, sizeof(to_send), "{\"content\": \"%s\"}", message);
-		curl_easy_setopt(curl, CURLOPT_URL, target);
+	curl_easy_setopt(curl, CURLOPT_URL, target);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, to_send);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
     res = curl_easy_perform(curl);
@@ -85,6 +62,7 @@ void send_message (char* message, char* channel_id) {
         printf("Error: \"%s\"\n", json_object_get_string(a));
     }
 }
+
 char* get_gateway_url (CURL *curl) {
     CURLcode res;
     struct string s;
@@ -107,12 +85,22 @@ char* get_gateway_url (CURL *curl) {
         printf("Error: \"%s\"\n", json_object_get_string(a));
     }
 }
+
 int onclose(wsclient *c) {
     fprintf(stderr, "onclose called: %d\n", c->sockfd);
     // TODO error parsing
     done = 1;
     return 0;
 }
+
+int set_token(char* token) {
+    char to_header[SIZE];
+    snprintf(to_header, sizeof(to_header), "Authorization: Bot %s", token);
+    header = curl_slist_append(header, to_header);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
+    return 0;
+}
+
 int onerror(wsclient *c, wsclient_error *err) {
     fprintf(stderr, "onerror: (%d): %s\n", err->code, err->str);
     if(err->extra_code) {
@@ -121,6 +109,7 @@ int onerror(wsclient *c, wsclient_error *err) {
     }
     done = 1;
 }
+
 int onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
     json_object *message;
     message = json_tokener_parse(msg->payload);
@@ -128,41 +117,79 @@ int onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
     t = json_object_object_get(message, "t");
     // TODO: sequence = json_object_object_get(message, "s");
     printf("Got new event \"%s\"\n", json_object_get_string(t));
+    //printf("%s", json_object_to_json_string(message));
     if (strcmp(json_object_get_string(t), "READY") == 0) {
+        json_object *output = json_object_object_get(message, "d");
+        json_object *output_user = json_object_object_get(output, "user");
+        struct user _bot = {
+            .id = json_object_get_string(json_object_object_get(output_user, "id")),
+            .username = json_object_get_string(json_object_object_get(output_user, "username")),
+            .discriminator = json_object_get_string(json_object_object_get(output_user, "discriminator")),
+            .avatar = json_object_get_string(json_object_object_get(output_user, "avatar")),
+            .bot = json_object_get_int(json_object_object_get(output_user, "bot")),
+            .mfa_enabled = json_object_get_int(json_object_object_get(output_user, "mfa_enabled")),
+            .verified = json_object_get_int(json_object_object_get(output_user, "verified")),
+            .email = json_object_get_string(json_object_object_get(output_user, "email"))
+        };
+        bot = _bot;
     }
     if (strcmp(json_object_get_string(t), "MESSAGE_CREATE") == 0) {
         json_object *output = json_object_object_get(message, "d");
-        struct message msg;
-        msg.id = json_object_get_string(json_object_object_get(output, "id"));
-        msg.channel_id = json_object_get_string(json_object_object_get(output, "channel_id"));
-        msg.timestamp = json_object_get_string(json_object_object_get(output, "timestamp"));
-        msg.edited_timestamp = json_object_get_string(json_object_object_get(output, "edited_timestamp"));
-        msg.tts = json_object_get_int(json_object_object_get(output, "tts"));
-        msg.mention_everyone = json_object_get_int(json_object_object_get(output, "mention_everyone"));
-        msg.pinned = json_object_get_int(json_object_object_get(output, "pinned"));
-        msg.webhook_id = json_object_get_string(json_object_object_get(output, "webhook_id"));
-        msg.content = json_object_get_string(json_object_object_get(output, "content"));
+        json_object *_author = json_object_object_get(output, "author");
+        struct user author = {
+            .id = json_object_get_string(json_object_object_get(_author, "id")),
+            .username = json_object_get_string(json_object_object_get(_author, "username")),
+            .discriminator = json_object_get_string(json_object_object_get(_author, "discriminator")),
+            .avatar = json_object_get_string(json_object_object_get(_author, "avatar")),
+            .bot = json_object_get_int(json_object_object_get(_author, "bot")),
+            .mfa_enabled = json_object_get_int(json_object_object_get(_author, "mfa_enabled")),
+            .verified = json_object_get_int(json_object_object_get(_author, "verified")),
+            .email = json_object_get_string(json_object_object_get(_author, "email"))
+        };
+        struct message msg = {
+            .id = json_object_get_string(json_object_object_get(output, "id")),
+            .author = author,
+            .channel_id = json_object_get_string(json_object_object_get(output, "channel_id")),
+            .timestamp = json_object_get_string(json_object_object_get(output, "timestamp")),
+            .edited_timestamp = json_object_get_string(json_object_object_get(output, "edited_timestamp")),
+            .tts = json_object_get_int(json_object_object_get(output, "tts")),
+            .mention_everyone = json_object_get_int(json_object_object_get(output, "mention_everyone")),
+            .pinned = json_object_get_int(json_object_object_get(output, "pinned")),
+            .webhook_id = json_object_get_string(json_object_object_get(output, "webhook_id")),
+            .content = json_object_get_string(json_object_object_get(output, "content"))
+        };
         on_discord_message(msg);
     }
     return 0;
 }
+
 int on_discord_message(struct message msg) {
-		// if (msg.content == "!ping") { 
-    // 	send_message("Pong!", "222739089009541130");
-		// };
+    if (strcmp(msg.author.id, bot.id)) {
+        if (!strcmp(msg.content, "!hi")) {
+            char to_send[SIZE]; 
+            snprintf(to_send, sizeof(to_send), "Hi, %s", msg.author.username);
+            send_message(to_send, msg.channel_id);
+        };
+        if (!strcmp(msg.content, "ping")) {
+            send_message("ping", msg.channel_id);
+        };
+    }
 }
+
 int onopen(wsclient *c) {
     fprintf(stderr, "onopen called: %d\n", c->sockfd);
-    json_object *response = json_tokener_parse("{\"op\":2,\"d\":{\"token\":\"\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}");
+    char _token[SIZE];
+    snprintf(_token, sizeof(_token), "{\"op\":2,\"d\":{\"token\":\"%s\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}", bot_token);
+    json_object *response = json_tokener_parse(_token);
     libwsclient_send(c, json_object_to_json_string(response));
     return 0;
 }
+
 int main (int argc, char* argv[]) {
-    header = curl_slist_append(header, token);
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
     if(curl) {
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
+        set_token(bot_token);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
