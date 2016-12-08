@@ -3,11 +3,12 @@
 #include <curl/curl.h>
 #include <json.h>
 #include <wsclient/wsclient.h>
+#include "iniparser/src/iniparser.h"
 
 #include "crow.h"
 
 struct curl_slist *header = NULL;
-char bot_token[SIZE];
+char *bot_token;
 json_object *d;
 CURL *curl;
 int done = 0;
@@ -87,7 +88,7 @@ char* get_gateway_url (CURL *curl) {
 }
 
 int onclose(wsclient *c) {
-    fprintf(stderr, "onclose called: %d\n", c->sockfd);
+    printf("WS server closed the connection.");
     // TODO error parsing
     done = 1;
     return 0;
@@ -176,6 +177,10 @@ int on_discord_message(struct message msg) {
     }
 }
 
+void on_discord_message_update (struct message msg) {
+
+}
+
 int onopen(wsclient *c) {
     fprintf(stderr, "onopen called: %d\n", c->sockfd);
     char _token[SIZE];
@@ -185,15 +190,22 @@ int onopen(wsclient *c) {
     return 0;
 }
 
-int main (int argc, char* argv[]) {
-    FILE *token_file;
-    if ((token_file = fopen("token", "r")) == NULL)
-    {
-        printf("Cant read token file or it not exists!");
-        exit(1);         
+int parse_config () {
+    dictionary *ini;
+
+    ini = iniparser_load("config.ini");
+
+    if (ini == NULL) {
+        printf("Cant find config.ini file!");
+        exit(1);
     }
-    fscanf(token_file,"%[^\n]", bot_token);
-    fclose(token_file);
+
+    bot_token = iniparser_getstring(ini, "settings:token", NULL);
+    return 0;
+}
+
+int main (int argc, char* argv[]) {
+    parse_config();
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
     if(curl) {
@@ -211,7 +223,6 @@ int main (int argc, char* argv[]) {
         libwsclient_onmessage(client, &onmessage);
         libwsclient_onerror(client, &onerror);
         libwsclient_onclose(client, &onclose);
-        //starts run thread.
         libwsclient_run(client);
         fflush(stdout);
         sleep(2);
