@@ -31,18 +31,18 @@ struct message {
     mention_roles
     attachments
     embeds
-    reactions
     nonce
     */
+    struct reaction reactions[];
     int pinned;
     char* webhook_id;
 };
 struct emoji {
-	char* id;
-	char* name;
+    char* id;
+    char* name;
 };
 struct reaction {
-	int counter;
-	int me;
-	struct emoji _emoji;
+    int counter;
+    int me;
+    struct emoji _emoji;
 };
