@@ -33,7 +33,7 @@ struct message {
     embeds
     nonce
     */
-    struct reaction reactions[];
+    struct reaction reactions[65536];
     int pinned;
     char* webhook_id;
 };
