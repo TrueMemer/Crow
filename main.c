@@ -33,6 +33,15 @@ struct message {
     int pinned;
     char* webhook_id;
 };
+struct emoji {
+	char* id;
+	char* name;
+};
+struct reaction {
+	int counter;
+	int me;
+	struct emoji _emoji;
+};
 struct curl_slist *header = NULL;
 char * token = "Authorization: Bot ";
 json_object *d;
