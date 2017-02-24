@@ -39,7 +39,7 @@ struct emoji {
 };
 struct reaction {
 	int counter;
-	bool me;
+	int me;
 	struct emoji _emoji;
 };
 struct curl_slist *header = NULL;
