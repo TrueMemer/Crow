@@ -72,7 +72,7 @@ typedef struct message {
     embeds
     nonce
     */
-    reaction_t reactions[65536];
+    reaction_t reactions[1024];
     int pinned;
     char* webhook_id;
 } message_t;

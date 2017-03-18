@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <getopt.h>
+#include <stdbool.h>
 
 extern const char *__progname;
 
@@ -34,8 +35,15 @@ struct curl_fetch_st curl_fetch;
 struct curl_fetch_st *cf = &curl_fetch;
 
 const char *token;
+char *bot_prefix;
 int done;
 user_t bot; // Our bot user
+
+bool startsWith(const char *a, const char *b)
+{
+   if(strncmp(a, b, strlen(b)) == 0) return 1;
+   return 0;
+}
 
 // I'm not in this memory shit so I copypasted it
 size_t curl_callback (void *contents, size_t size, size_t nmemb, void *userp) {
@@ -131,8 +139,24 @@ send_message(char* channel_id, char* text) {
 
 void 
 on_discord_message(message_t msg) {
-	if (!strcmp("!ping", msg.content)) {
-		send_message(msg.channel_id, "Pong!");
+	if (strcmp(msg.author.id, bot.id)) {
+		if (startsWith(msg.content, bot_prefix)) {
+			msg.content = msg.content + strlen(bot_prefix);
+
+			if (!strcmp("ping", msg.content)) {
+			send_message(msg.channel_id, "Pong!");
+			}
+			if (startsWith(msg.content, "echo")) {
+				send_message(msg.channel_id, msg.content);
+			}
+			if (!strcmp("hi", msg.content)) {
+				char to_send[1024];
+
+				snprintf(to_send, sizeof(to_send), "Hi, %s!", msg.author.username);
+
+				send_message(msg.channel_id, to_send);
+			}
+		}
 	}
 }
 
@@ -189,6 +213,24 @@ onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
 		author.verified = json_object_get_int(json_object_object_get(_author, "verified"));
 		author.email = json_object_get_string(json_object_object_get(_author, "email"));
 
+		// json_object *mentions;
+
+		// if (json_object_object_get(output, "mentions")) {
+		// 	mentions = json_object_object_get(output, "mentions");
+		// 	user_t mentions_array[json_object_array_length(mentions)];
+		// 	for (int i = 0; i <= json_object_array_length(mentions); i++) {
+		// 		json_object *curr = json_object_array_get_idx(mentions, i);
+		// 		mentions_array[i].id = json_object_get_string(json_object_object_get(curr, "id"));
+		// 		mentions_array[i].username = json_object_get_string(json_object_object_get(curr, "username"));
+		// 		mentions_array[i].discriminator = json_object_get_string(json_object_object_get(curr, "discriminator"));
+		// 		mentions_array[i].avatar = json_object_get_string(json_object_object_get(curr, "avatar"));
+		// 		mentions_array[i].bot = json_object_get_int(json_object_object_get(curr, "bot"));
+		// 		mentions_array[i].mfa_enabled = json_object_get_int(json_object_object_get(curr, "mfa_enabled"));
+		// 		mentions_array[i].verified = json_object_get_int(json_object_object_get(curr, "verified"));
+		// 		mentions_array[i].email = json_object_get_string(json_object_object_get(curr, "email"));
+		// 	}
+		// }
+
         message_t msg;
 		msg.id = json_object_get_string(json_object_object_get(output, "id"));
 		msg.author = author;
@@ -243,6 +285,7 @@ main(int argc, char *argv[])
                 { "help",  no_argument, 0, 'h' },
                 { "version", no_argument, 0, 'v' },
 				{ "token", required_argument, 0, 't'},
+				{ "prefix", required_argument, 0, 'p'},
 		{ 0 }
 	};
 	while (1) {
@@ -262,6 +305,9 @@ main(int argc, char *argv[])
 		case 'd':
 			debug++;
 			break;
+		case 'p':
+			bot_prefix = optarg;
+			break;
 		case 'D':
 			log_accept(optarg);
 			break;
@@ -275,6 +321,8 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if (!bot_prefix) { bot_prefix = '!'; }
+
 	log_init(debug, __progname);
 
 	if (!token) {
@@ -283,7 +331,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	log_debug("main", "Starting with token %s...", token);
+	log_debug("main", "Starting with token %s and prefix %s...", token, bot_prefix);
 
 	if ((curl = curl_easy_init()) == NULL) {
         log_crit("curl", "Failed to create curl init object!");
