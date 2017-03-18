@@ -58,7 +58,7 @@ typedef struct reaction {
 typedef struct message {
     char* id;
     char* channel_id;
-    struct user author;
+    user_t author;
     char* content;
     char* timestamp;
     char* edited_timestamp;
@@ -72,7 +72,7 @@ typedef struct message {
     embeds
     nonce
     */
-    struct reaction reactions[65536];
+    reaction_t reactions[65536];
     int pinned;
     char* webhook_id;
 } message_t;
