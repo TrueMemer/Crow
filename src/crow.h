@@ -26,6 +26,12 @@
 
 #include <stdlib.h>
 
+char *api_url = "https://discordapp.com/api/";
+
+typedef struct curl_fetch_st {
+    char *payload;
+    size_t size;
+} curl_fetch_t;
 
 typedef struct user {
     char* id;
