@@ -33,6 +33,66 @@ typedef struct curl_fetch_st {
     size_t size;
 } curl_fetch_t;
 
+typedef struct thumbnail {
+    char* url;
+    char* proxy_url;
+    int height;
+    int width;
+} thumbnail_t;
+
+typedef struct video {
+    char* url;
+    int height;
+    int width;
+} video_t;
+
+typedef struct image {
+    char* url;
+    char* proxy_url;
+    int height;
+    int width;
+} image_t;
+
+typedef struct provider {
+    char* name;
+    char* url;
+} provider_t; 
+
+typedef struct author {
+    char* name;
+    char* url;
+    char* icon_url;
+    char* proxy_icon_url;
+} author_t;
+
+typedef struct footer {
+    char* text;
+    char* icon_url;
+    char* proxy_icon_url;
+} footer_t;
+
+typedef struct field {
+    char* name;
+    char* value;
+    int _inline;
+} field_t;
+
+typedef struct embed {
+    char* title;
+    char* type;
+    char* description;
+    char* url;
+    char* timestamp;
+    int color;
+    footer_t footer;
+    image_t image;
+    thumbnail_t thumbnail;
+    video_t video;
+    provider_t provider;
+    author_t author;
+    field_t fields;
+} embed_t;
+
 typedef struct user {
     char* id;
     char* username;
@@ -64,14 +124,15 @@ typedef struct message {
     char* edited_timestamp;
     int tts;
     int mention_everyone;
+    user_t mentions[1024];
     /*
     TODO:
-    mentions
     mention_roles
     attachments
     embeds
     nonce
     */
+    embed_t embeds[1024];
     reaction_t reactions[1024];
     int pinned;
     char* webhook_id;
