@@ -1,5 +1,5 @@
 # Crow
 
-Discord library written is pure C.
+Discord library written in C.
 
-**I doing it only for educational purposes!**
+**Needs to be rewritten! Do not use!**

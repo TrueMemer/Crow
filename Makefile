@@ -1,4 +1,4 @@
-TARGET = discord
+TARGET = crow
 LIBS = -lm -lcurl -ljson-c -lwsclient -lpthread
 CC = gcc
 CFLAGS = -g -O2
