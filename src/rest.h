@@ -22,6 +22,8 @@
 
 void init_curl();
 void send_message(char *channel_id, char *text);
+void add_reaction(char* channel_id, char *message_id, char *emoji);
+guild_channel_t get_channel(char *channel_id);
 CURLcode curl_fetch_url(CURL *ch, const char *url, struct curl_fetch_st *fetch);
 
 #endif

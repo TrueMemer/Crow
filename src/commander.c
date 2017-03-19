@@ -19,6 +19,8 @@
 #include "commander.h"
 #include "rest.h"
 
+#include <string.h>
+
 void 
 on_discord_message(message_t msg) {
 	if (strcmp(msg.author.id, bot.id)) {
@@ -26,7 +28,19 @@ on_discord_message(message_t msg) {
 			msg.content = msg.content + strlen(bot_prefix);
 
 			if (!strcmp("ping", msg.content)) {
-			send_message(msg.channel_id, "Pong!");
+				send_message(msg.channel_id, "Pong!");
+			}
+			if (!strcmp("ok", msg.content)) {
+				add_reaction(msg.channel_id, msg.id, "trumpLUL:237288619088412683");
+			}
+			if (!strcmp("debug_channel", msg.content)) {
+				guild_channel_t channel = get_channel(msg.channel_id);
+
+				char to_send[1024];
+
+				snprintf(to_send, sizeof(to_send), "This channel: \nID: %s\nGuildID: %s\nType: %d\nTopic: %s ", channel.id, channel.guild_id, channel.type, channel.topic);
+
+				send_message(msg.channel_id, to_send);
 			}
 			if (startsWith(msg.content, "echo")) {
 				send_message(msg.channel_id, msg.content);

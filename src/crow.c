@@ -126,51 +126,51 @@ onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
 
         on_discord_message(msg);
     }
-	if (strcmp(json_object_get_string(t), "PRESENCE_UPDATE") == 0) {
-		log_debug("websocket", msg->payload);
-		json_object *output = json_object_object_get(message, "d");
-		json_object *output_user = json_object_object_get(output, "user");
-		presence_update_t upd;
-		user_t upd_user;
+	// if (strcmp(json_object_get_string(t), "PRESENCE_UPDATE") == 0) {
+	// 	log_debug("websocket", msg->payload);
+	// 	json_object *output = json_object_object_get(message, "d");
+	// 	json_object *output_user = json_object_object_get(output, "user");
+	// 	presence_update_t upd;
+	// 	user_t upd_user;
 
-		upd_user.id = json_object_get_string(json_object_object_get(output_user, "id"));
+	// 	upd_user.id = json_object_get_string(json_object_object_get(output_user, "id"));
 
-		upd.user = upd_user;
-		json_object *_roles_array = json_object_object_get(output, "roles");
-		array_list *_roles_array_list = json_object_get_array(_roles_array);
+	// 	upd.user = upd_user;
+	// 	json_object *_roles_array = json_object_object_get(output, "roles");
+	// 	array_list *_roles_array_list = json_object_get_array(_roles_array);
 
-		for (int i = 0; i < _roles_array_list->length; i++) {
-			upd.roles[i] = json_object_array_get_idx(_roles_array_list, i);
-		}
+	// 	for (int i = 0; i < _roles_array_list->length; i++) {
+	// 		upd.roles[i] = json_object_array_get_idx(_roles_array_list, i);
+	// 	}
 
-		int is_game_null = json_object_get_type(json_object_object_get(output, "game"));
+	// 	int is_game_null = json_object_get_type(json_object_object_get(output, "game"));
 
-		json_object *game_object;
+	// 	json_object *game_object;
 
-		switch (is_game_null) {
-			case json_type_null:
-				break;
-			case json_type_object:
+	// 	switch (is_game_null) {
+	// 		case json_type_null:
+	// 			break;
+	// 		case json_type_object:
 			
-				game_object = json_object_object_get(output, "game");
-				game_t game;
+	// 			game_object = json_object_object_get(output, "game");
+	// 			game_t game;
 
-				game.name = json_object_get_string(json_object_object_get(game_object, "name"));
-				game.type = json_object_get_int(json_object_object_get(game_object, "type"));
-				game.url = json_object_get_string(json_object_object_get(game_object, "url"));
+	// 			game.name = json_object_get_string(json_object_object_get(game_object, "name"));
+	// 			game.type = json_object_get_int(json_object_object_get(game_object, "type"));
+	// 			game.url = json_object_get_string(json_object_object_get(game_object, "url"));
 
-				upd.game = game;
+	// 			upd.game = game;
 
-				break;
-			default:
-				break;
-		}
+	// 			break;
+	// 		default:
+	// 			break;
+	// 	}
 
-		upd.guild_id = json_object_get_string(json_object_object_get(output, "guild_id"));
-		upd.status = json_object_get_string(json_object_object_get(output, "status"));
+	// 	upd.guild_id = json_object_get_string(json_object_object_get(output, "guild_id"));
+	// 	upd.status = json_object_get_string(json_object_object_get(output, "status"));
 
-		on_presence_update(upd);
-	}
+	// 	on_presence_update(upd);
+	// }
     return 0;
 }
 
@@ -211,7 +211,7 @@ main(int argc, char *argv[])
                 { "help",  no_argument, 0, 'h' },
                 { "version", no_argument, 0, 'v' },
 				{ "token", required_argument, 0, 't'},
-				{ "prefix", required_argument, 0, 'p'},
+				{ "prefix", optional_argument, 0, 'p'},
 		{ 0 }
 	};
 	while (1) {
