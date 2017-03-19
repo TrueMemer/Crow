@@ -16,6 +16,8 @@
  */
 
 #include "crow.h"
+#include "commander.h"
+#include "rest.h"
 
 #include <curl/curl.h>
 #include <wsclient/wsclient.h>
@@ -25,139 +27,18 @@
 #include <unistd.h>
 #include <string.h>
 #include <getopt.h>
-#include <stdbool.h>
 
 extern const char *__progname;
-
-CURL *curl;
-struct curl_slist *headers;
-struct curl_fetch_st curl_fetch; 
-struct curl_fetch_st *cf = &curl_fetch;
 
 const char *token;
 char *bot_prefix;
 int done;
 user_t bot; // Our bot user
 
-bool startsWith(const char *a, const char *b)
+int startsWith(const char *a, const char *b)
 {
    if(strncmp(a, b, strlen(b)) == 0) return 1;
    return 0;
-}
-
-// I'm not in this memory shit so I copypasted it
-size_t curl_callback (void *contents, size_t size, size_t nmemb, void *userp) {
-    size_t realsize = size * nmemb;                             /* calculate buffer size */
-    curl_fetch_t *p = (struct curl_fetch_st *) userp;   /* cast pointer to fetch struct */
-
-    /* expand buffer */
-    p->payload = (char *) realloc(p->payload, p->size + realsize + 1);
-
-    /* check buffer */
-    if (p->payload == NULL) {
-      /* this isn't good */
-      fprintf(stderr, "ERROR: Failed to expand buffer in curl_callback");
-      /* free buffer */
-      free(p->payload);
-      /* return */
-      return -1;
-    }
-
-    /* copy contents to buffer */
-    memcpy(&(p->payload[p->size]), contents, realsize);
-
-    /* set new buffer size */
-    p->size += realsize;
-
-    /* ensure null termination */
-    p->payload[p->size] = 0;
-
-    /* return size */
-    return realsize;
-}
-
-/* fetch and return url body via curl */
-CURLcode curl_fetch_url(CURL *ch, const char *url, struct curl_fetch_st *fetch) {
-    CURLcode rcode;
-
-    fetch->payload = (char *) calloc(1, sizeof(fetch->payload));
-
-    if (fetch->payload == NULL) {
-        fprintf(stderr, "ERROR: Failed to allocate payload in curl_fetch_url");
-        return CURLE_FAILED_INIT;
-    }
-
-    fetch->size = 0;
-
-    curl_easy_setopt(ch, CURLOPT_URL, url);
-
-    curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, curl_callback);
-
-    curl_easy_setopt(ch, CURLOPT_WRITEDATA, (void *) fetch);
-
-    curl_easy_setopt(ch, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-
-    curl_easy_setopt(ch, CURLOPT_TIMEOUT, 5);
-
-    curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
-
-    curl_easy_setopt(ch, CURLOPT_MAXREDIRS, 1);
-
-    rcode = curl_easy_perform(ch);
-
-    return rcode;
-}
-
-void
-send_message(char* channel_id, char* text) {
-	CURLcode res;
-
-	json_object *tosend;
-	
-	tosend = json_object_new_object();
-
-	json_object_object_add(tosend, "content", json_object_new_string(text));
-
-	char target[1024];
-
-	snprintf(target, sizeof(target), "https://discordapp.com/api/channels/%s/messages", channel_id);
-
-	curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(tosend));
-
-	res = curl_fetch_url(curl, target, cf);
-
-	if (res != CURLE_OK || cf->size < 1) {
-		fprintf(stderr, "ERROR: Failed to fetch url (%s) - curl said: %s",
-			target, curl_easy_strerror(res));
-	}
-
-	if (cf->payload != NULL) {
-		log_debug("curl", "CURL returned %s", cf->payload);
-	}
-}
-
-void 
-on_discord_message(message_t msg) {
-	if (strcmp(msg.author.id, bot.id)) {
-		if (startsWith(msg.content, bot_prefix)) {
-			msg.content = msg.content + strlen(bot_prefix);
-
-			if (!strcmp("ping", msg.content)) {
-			send_message(msg.channel_id, "Pong!");
-			}
-			if (startsWith(msg.content, "echo")) {
-				send_message(msg.channel_id, msg.content);
-			}
-			if (!strcmp("hi", msg.content)) {
-				char to_send[1024];
-
-				snprintf(to_send, sizeof(to_send), "Hi, %s!", msg.author.username);
-
-				send_message(msg.channel_id, to_send);
-			}
-		}
-	}
 }
 
 static void
@@ -245,6 +126,51 @@ onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
 
         on_discord_message(msg);
     }
+	if (strcmp(json_object_get_string(t), "PRESENCE_UPDATE") == 0) {
+		log_debug("websocket", msg->payload);
+		json_object *output = json_object_object_get(message, "d");
+		json_object *output_user = json_object_object_get(output, "user");
+		presence_update_t upd;
+		user_t upd_user;
+
+		upd_user.id = json_object_get_string(json_object_object_get(output_user, "id"));
+
+		upd.user = upd_user;
+		json_object *_roles_array = json_object_object_get(output, "roles");
+		array_list *_roles_array_list = json_object_get_array(_roles_array);
+
+		for (int i = 0; i < _roles_array_list->length; i++) {
+			upd.roles[i] = json_object_array_get_idx(_roles_array_list, i);
+		}
+
+		int is_game_null = json_object_get_type(json_object_object_get(output, "game"));
+
+		json_object *game_object;
+
+		switch (is_game_null) {
+			case json_type_null:
+				break;
+			case json_type_object:
+			
+				game_object = json_object_object_get(output, "game");
+				game_t game;
+
+				game.name = json_object_get_string(json_object_object_get(game_object, "name"));
+				game.type = json_object_get_int(json_object_object_get(game_object, "type"));
+				game.url = json_object_get_string(json_object_object_get(game_object, "url"));
+
+				upd.game = game;
+
+				break;
+			default:
+				break;
+		}
+
+		upd.guild_id = json_object_get_string(json_object_object_get(output, "guild_id"));
+		upd.status = json_object_get_string(json_object_object_get(output, "status"));
+
+		on_presence_update(upd);
+	}
     return 0;
 }
 
@@ -331,20 +257,9 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
+	init_curl();
+
 	log_debug("main", "Starting with token %s and prefix %s...", token, bot_prefix);
-
-	if ((curl = curl_easy_init()) == NULL) {
-        log_crit("curl", "Failed to create curl init object!");
-        exit(1);
-	}
-
-	char authorization_header[1024];
-
-	snprintf(authorization_header, sizeof(authorization_header), "Authorization: Bot %s", token);
-
-	headers = curl_slist_append(headers, authorization_header);
-
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
 	wsclient *client = libwsclient_new("wss://gateway.discord.gg");
 

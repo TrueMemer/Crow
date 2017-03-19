@@ -15,8 +15,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _BOOTSTRAP_H
-#define _BOOTSTRAP_H
+#ifndef _CROW_H
+#define _CROW_H
 
 #if HAVE_CONFIG_H
 #  include <config.h>
@@ -25,13 +25,36 @@
 #include "log.h"
 
 #include <stdlib.h>
+#include <curl/curl.h>
 
-char *api_url = "https://discordapp.com/api/";
+enum game_types {
+    GAME = 0,
+    STREAMING = 1
+};
+
+enum channel_types {
+    TEXT = 0,
+    VOICE = 1
+};
 
 typedef struct curl_fetch_st {
     char *payload;
     size_t size;
 } curl_fetch_t;
+
+typedef struct guild_channel {
+    char *id;
+    char *guild_id;
+    char *name;
+    int type;
+    int position;
+    int is_private;
+    /* TODO permission_overwrites */
+    char *topic;
+    char *last_message_id;
+    int bitrate;
+    int user_limit;
+} guild_channel_t;
 
 typedef struct thumbnail {
     char* url;
@@ -104,6 +127,27 @@ typedef struct user {
     char* email;
 } user_t;
 
+typedef struct dm_channel {
+    char *id;
+    int is_private;
+    user_t recipient;
+    char *last_message_id;
+} dm_channel_t;
+
+typedef struct game {
+    char *name;
+    int type;
+    char *url; // Only if type is STREAMING (1)
+} game_t;
+
+typedef struct presence_update {
+    user_t user; // Can be partial
+    game_t game; // May be null
+    char *guild_id;
+    char *status;
+    char *roles[200];
+} presence_update_t;
+
 typedef struct emoji {
     char* id;
     char* name;
@@ -137,5 +181,11 @@ typedef struct message {
     int pinned;
     char* webhook_id;
 } message_t;
+
+int startsWith(const char *a, const char *b);
+
+extern user_t bot;
+extern char *bot_prefix;
+extern const char *token;
 
 #endif
