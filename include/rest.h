@@ -15,12 +15,18 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _COMMANDER_H_
-#define _COMMANDER_H_
+#ifndef _REST_H_
+#define _REST_H_
+
+#include <curl/curl.h>
+#include <json.h>
 
 #include "crow.h"
 
-void on_discord_message(message_t msg);
-void on_presence_update(presence_update_t upd);
+void init_curl();
+void send_message(char *channel_id, char *text);
+void add_reaction(char* channel_id, char *message_id, char *emoji);
+guild_channel_t get_channel(char *channel_id);
+CURLcode curl_fetch_url(CURL *ch, const char *url, struct curl_fetch_st *fetch);
 
 #endif

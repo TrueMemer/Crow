@@ -15,20 +15,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "crow.h"
-#include "commander.h"
-#include "rest.h"
+#include "../include/crow.h"
 
-#include <curl/curl.h>
-#include <wsclient/wsclient.h>
-#include <json.h>
+#include "../deps/libwsclient/wsclient.h"
 
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
 #include <getopt.h>
-
-extern const char *__progname;
+#include <errno.h>
 
 const char *token;
 char *bot_prefix;
@@ -44,16 +36,15 @@ int startsWith(const char *a, const char *b)
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: %s [OPTIONS]\n",
-	    __progname);
-	fprintf(stderr, "Version: %s\n", PACKAGE_STRING);
+	fprintf(stderr, "Usage: ./crow [OPTIONS]\n");
+	//fprintf(stderr, "Version: %s\n", PACKAGE_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, " -d, --debug        be more verbose.\n");
 	fprintf(stderr, " -h, --help         display help and exit\n");
 	fprintf(stderr, " -v, --version      print version and exit\n");
 	fprintf(stderr, " -t, --token        your bot token. REQUIRED\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "see manual page " PACKAGE "(8) for more information\n");
+	//fprintf(stderr, "see manual page " PACKAGE "(8) for more information\n");
 }
 
 // Ignore deprecated function and discarded qualifiers
@@ -65,7 +56,7 @@ onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
     message = json_tokener_parse(msg->payload);
     json_object *t;
     t = json_object_object_get(message, "t");
-    log_debug("websocket", "Got new event \"%s\"\n", json_object_get_string(t));
+    log_debug("Got new event \"%s\"\n", json_object_get_string(t));
     if (strcmp(json_object_get_string(t), "READY") == 0) {
         json_object *output = json_object_object_get(message, "d");
         json_object *output_user = json_object_object_get(output, "user");
@@ -176,13 +167,13 @@ onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
 
 void 
 onclose(wsclient *c) {
-    log_info("websocket", "WS server closed the connection!");
+    log_warn("WS server closed the connection!");
     done = 1;
 }
 
 void 
 onerror(wsclient *c, wsclient_error *err) {
-    log_crit("websocket", "Error %d has occuried: %s!\n", err->code, err->str);
+    log_error("error %d has occuried: %s!\n", err->code, err->str);
     if(err->extra_code) {
         errno = err->extra_code;
         perror("recv");
@@ -192,7 +183,7 @@ onerror(wsclient *c, wsclient_error *err) {
 
 void 
 onopen(wsclient *c) {
-    log_info("websocket", "Onopen websocket function is called!");
+    log_info("onopen websocket function is called!");
     char _token[1024];
     snprintf(_token, sizeof(_token), "{\"op\":2,\"d\":{\"token\":\"%s\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}", token);
     json_object *response = json_tokener_parse(_token);
@@ -203,7 +194,6 @@ onopen(wsclient *c) {
 int
 main(int argc, char *argv[])
 {
-	int debug = 1;
 	int ch;
 
 	static struct option long_options[] = {
@@ -211,7 +201,6 @@ main(int argc, char *argv[])
                 { "help",  no_argument, 0, 'h' },
                 { "version", no_argument, 0, 'v' },
 				{ "token", required_argument, 0, 't'},
-				{ "prefix", optional_argument, 0, 'p'},
 		{ 0 }
 	};
 	while (1) {
@@ -224,18 +213,12 @@ main(int argc, char *argv[])
 			usage();
 			exit(0);
 			break;
-		case 'v':
-			fprintf(stdout, "%s\n", PACKAGE_VERSION);
-			exit(0);
-			break;
+		// case 'v':
+		// 	fprintf(stdout, "%s\n", PACKAGE_VERSION);
+		// 	exit(0);
+		// 	break;
 		case 'd':
-			debug++;
-			break;
-		case 'p':
-			bot_prefix = optarg;
-			break;
-		case 'D':
-			log_accept(optarg);
+			log_set_level(LOG_DEBUG);
 			break;
 		case 't':
 			token = optarg;
@@ -247,26 +230,22 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (!bot_prefix) { bot_prefix = '!'; }
-
-	log_init(debug, __progname);
-
 	if (!token) {
 		fprintf(stderr, "no token provided\n");
 		usage();
 		exit(1);
 	}
 
-	init_curl();
+	init_curl(token);
 
-	log_debug("main", "Starting with token %s and prefix %s...", token, bot_prefix);
+	log_info("starting with token %s", token);
 
 	wsclient *client = libwsclient_new("wss://gateway.discord.gg");
 
-	log_info("main", "Initializing Websocket client...");
+	log_info("initializing Websocket client...");
 
 	if(!client) {
-		log_crit("websocket", "Unable to initialize new WS client!");
+		log_fatal("unable to initialize new WS client!");
 		exit(1);
 	}
 
@@ -277,7 +256,7 @@ main(int argc, char *argv[])
 
 	libwsclient_run(client);
 
-	log_info("main", "WS client thread is running...");
+	log_info("WS client thread is running...");
 
 	fflush(stdout);
 	sleep(2);

@@ -15,160 +15,67 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <curl/curl.h>
-#include <json.h>
+#include "../include/rest.h"
+#include "../deps/librequests/include/requests.h"
 
-#include "log.h"
-#include "crow.h"
+char header[1024];
 
-CURL *curl;
-struct curl_slist *headers;
-struct curl_slist *put_headers;
-struct curl_fetch_st curl_fetch; 
-struct curl_fetch_st *cf = &curl_fetch;
-
-void
-init_curl() {
-	if ((curl = curl_easy_init()) == NULL) {
-        log_crit("curl", "Failed to create curl init object!");
-        exit(1);
-	}
-
-    char authorization_header[1024];
-
-	snprintf(authorization_header, sizeof(authorization_header), "Authorization: Bot %s", token);
-
-	headers = curl_slist_append(headers, authorization_header);
-
-    put_headers = curl_slist_append(put_headers, authorization_header);
-
-    put_headers = curl_slist_append(put_headers, "Content-Length: 0");
-
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-}
-
-// I'm not in this memory shit so I copypasted it
-size_t curl_callback (void *contents, size_t size, size_t nmemb, void *userp) {
-    size_t realsize = size * nmemb;                             /* calculate buffer size */
-    curl_fetch_t *p = (struct curl_fetch_st *) userp;   /* cast pointer to fetch struct */
-
-    /* expand buffer */
-    p->payload = (char *) realloc(p->payload, p->size + realsize + 1);
-
-    /* check buffer */
-    if (p->payload == NULL) {
-      /* this isn't good */
-      fprintf(stderr, "ERROR: Failed to expand buffer in curl_callback");
-      /* free buffer */
-      free(p->payload);
-      /* return */
-      return -1;
-    }
-
-    /* copy contents to buffer */
-    memcpy(&(p->payload[p->size]), contents, realsize);
-
-    /* set new buffer size */
-    p->size += realsize;
-
-    /* ensure null termination */
-    p->payload[p->size] = 0;
-
-    /* return size */
-    return realsize;
-}
-
-/* fetch and return url body via curl */
-CURLcode curl_fetch_url(CURL *ch, const char *url, struct curl_fetch_st *fetch) {
-    CURLcode rcode;
-
-    fetch->payload = (char *) calloc(1, sizeof(fetch->payload));
-
-    if (fetch->payload == NULL) {
-        fprintf(stderr, "ERROR: Failed to allocate payload in curl_fetch_url");
-        return CURLE_FAILED_INIT;
-    }
-
-    fetch->size = 0;
-
-    curl_easy_setopt(ch, CURLOPT_URL, url);
-
-    curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, curl_callback);
-
-    curl_easy_setopt(ch, CURLOPT_WRITEDATA, (void *) fetch);
-
-    curl_easy_setopt(ch, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-
-    curl_easy_setopt(ch, CURLOPT_TIMEOUT, 5);
-
-    curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
-
-    curl_easy_setopt(ch, CURLOPT_MAXREDIRS, 1);
-
-    rcode = curl_easy_perform(ch);
-
-    return rcode;
+void init_curl(char *token) {
+    sprintf(header, "Authorization: Bot %s", token);
 }
 
 void
 send_message(char* channel_id, char* text) {
-	CURLcode res;
+    req_t req;
+	CURL *curl = requests_init(&req);
 
 	json_object *tosend;
-	
 	tosend = json_object_new_object();
-
 	json_object_object_add(tosend, "content", json_object_new_string(text));
 
 	char target[1024];
+	sprintf(target, "https://discordapp.com/api/channels/%s/messages", channel_id);
 
-	snprintf(target, sizeof(target), "https://discordapp.com/api/channels/%s/messages", channel_id);
+    char *auth_header[] = {
+        header
+    };
 
-	curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(tosend));
+	requests_post_headers(curl, &req, target, json_object_to_json_string(tosend), auth_header, sizeof(auth_header)/sizeof(char*));
 
-	res = curl_fetch_url(curl, target, cf);
-
-	if (res != CURLE_OK || cf->size < 1) {
-		fprintf(stderr, "ERROR: Failed to fetch url (%s) - curl said: %s",
-			target, curl_easy_strerror(res));
+	if (req.ok) {
+        log_debug("Request URL: %s\n", req.url);
+        log_debug("Response Code: %lu\n", req.code);
+        log_debug("Response Body:\n%s", req.text);
 	}
 
-	if (cf->payload != NULL) {
-		log_debug("curl", "CURL returned %s", cf->payload);
-	}
+    requests_close(&req);
 }
 
 guild_channel_t
 get_channel(char* channel_id) {
-	CURLcode res;
+	req_t req;
+	CURL *curl = requests_init(&req);
 
     char target[1024];
 
-	snprintf(target, sizeof(target), "https://discordapp.com/api/channels/%s", channel_id);
+	sprintf(target, "https://discordapp.com/api/channels/%s", channel_id);
 
-	curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+    char *auth_header[] = {
+        header
+    };
 
-	res = curl_fetch_url(curl, target, cf);
+	requests_get_headers(curl, &req, target, auth_header, sizeof(auth_header)/sizeof(char*));
 
-	if (res != CURLE_OK || cf->size < 1) {
-		fprintf(stderr, "ERROR: Failed to fetch url (%s) - curl said: %s",
-			target, curl_easy_strerror(res));
-	}
-
-	if (cf->payload != NULL) {
-		log_debug("curl", "CURL returned %s", cf->payload);
-	}
+    if (!req.ok) {
+        log_debug("get_channel: something went wrong!");
+        return;
+    }
 
     guild_channel_t channel;
 
     json_object *output;
 
-    output = json_tokener_parse(cf->payload);
+    output = json_tokener_parse(req.text);
 
     channel.guild_id = json_object_get_string(json_object_object_get(output, "guild_id"));
     channel.name = json_object_get_string(json_object_object_get(output, "name"));
@@ -191,66 +98,55 @@ get_channel(char* channel_id) {
         channel.bitrate = json_object_get_int(json_object_object_get(output, "user_limit"));
     }
 
-    curl_easy_setopt(curl, CURLOPT_HTTPGET, NULL);
+    requests_close(&req);
 
     return channel;
 }
 
 void
 add_reaction(char* channel_id, char *message_id, char *emoji) {
-	CURLcode res;
+	req_t req;
+	CURL *curl = requests_init(&req);
 
 	char target[1024];
 
-	snprintf(target, sizeof(target), "https://discordapp.com/api/channels/%s/messages/%s/reactions/%s/@me",channel_id, message_id, emoji);
+    char *auth_header[] = {
+        header
+    };
 
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+	sprintf(target, "https://discordapp.com/api/channels/%s/messages/%s/reactions/%s/@me",channel_id, message_id, emoji);
 
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, put_headers);
+    requests_put_headers(curl, &req, target, NULL, auth_header, sizeof(auth_header)/sizeof(char*));
 
-	res = curl_fetch_url(curl, target, cf);
-
-    long response_code;
-
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-
-    if (response_code != 204) {
-        if (res != CURLE_OK || cf->size < 1) {
-            fprintf(stderr, "ERROR: Failed to fetch url (%s) - curl said: %s",
-                target, curl_easy_strerror(res));
-        }
-    }
-
-	if (cf->payload != NULL) {
-		log_debug("curl", "CURL returned %s", cf->payload);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-	}
+    log_debug("Request URL: %s\n", req.url);
+    log_debug("Response Code: %lu\n", req.code);
+    log_debug("Response Body:\n%s", req.text);
 }
 
-void
-delete_own_reaction(char* channel_id, char *message_id, char *emoji) {
-	CURLcode res;
+// void
+// delete_own_reaction(char* channel_id, char *message_id, char *emoji) {
+// 	CURLcode res;
 
-	char target[1024];
+// 	char target[1024];
 
-	snprintf(target, sizeof(target), "https://discordapp.com/api/channels/%s/messages/%s/reactions/%s/@me",channel_id, message_id, emoji);
+// 	snprintf(target, sizeof(target), "https://discordapp.com/api/channels/%s/messages/%s/reactions/%s/@me",channel_id, message_id, emoji);
 
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+//     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
 
-	res = curl_fetch_url(curl, target, cf);
+// 	res = curl_fetch_url(curl, target, cf);
 
-    long response_code;
+//     long response_code;
 
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+//     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
-    if (response_code != 204) {
-        if (res != CURLE_OK || cf->size < 1) {
-            fprintf(stderr, "ERROR: Failed to fetch url (%s) - curl said: %s",
-                target, curl_easy_strerror(res));
-        }
-    }
+//     if (response_code != 204) {
+//         if (res != CURLE_OK || cf->size < 1) {
+//             fprintf(stderr, "ERROR: Failed to fetch url (%s) - curl said: %s",
+//                 target, curl_easy_strerror(res));
+//         }
+//     }
     
-	if (cf->payload != NULL) {
-		log_debug("curl", "CURL returned %s", cf->payload);
-	}
-}
+// 	if (cf->payload != NULL) {
+// 		log_debug("CURL returned %s", cf->payload);
+// 	}
+// }

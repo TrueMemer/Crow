@@ -3,7 +3,7 @@
 
 Discord bot written in C.
 
-Tested on Ubuntu 16.10 yakkety.
+Tested on Ubuntu 16.10 yakkety and WSL.
 
 ## Installation
 

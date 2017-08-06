@@ -1,6 +1,6 @@
 /* -*- mode: c; c-file-style: "openbsd" -*- */
 /*
- * Copyright (c) 2017, Alexander Memer <mkoaleksedos@gmail.com>
+ * Copyright 2017 Alexander Memer <mkoaleksedos@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
  *
@@ -15,15 +15,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _REST_H_
-#define _REST_H_
+#ifndef _CROW_H
+#define _CROW_H
 
-#include "crow.h"
+#include "commander.h"
+#include "rest.h"
+#include "log.h"
+#include "types.h"
 
-void init_curl();
-void send_message(char *channel_id, char *text);
-void add_reaction(char* channel_id, char *message_id, char *emoji);
-guild_channel_t get_channel(char *channel_id);
-CURLcode curl_fetch_url(CURL *ch, const char *url, struct curl_fetch_st *fetch);
+int startsWith(const char *a, const char *b);
+
+extern user_t bot;
+extern const char *token;
 
 #endif
