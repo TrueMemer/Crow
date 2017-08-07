@@ -2,6 +2,7 @@
 #define _TYPES_H_
 
 #include <unistd.h>
+#include <json.h>
 
 enum game_types {
     GAME = 0,
@@ -157,5 +158,8 @@ typedef struct message {
     int pinned;
     char* webhook_id;
 } message_t;
+
+user_t user(json_object *raw);
+message_t message(json_object *raw);
 
 #endif // TYPES_H_

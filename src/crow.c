@@ -56,67 +56,18 @@ usage(void)
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 int 
 onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
-    json_object *message = json_tokener_parse(msg->payload);
+    json_object *m = json_tokener_parse(msg->payload);
     json_object *t;
-    t = json_object_object_get(message, "t");
+    t = json_object_object_get(m, "t");
     log_debug("Got new event \"%s\"\n", json_object_get_string(t));
     if (strcmp(json_object_get_string(t), "READY") == 0) {
-        json_object *output = json_object_object_get(message, "d");
-        json_object *output_user = json_object_object_get(output, "user");
-        user_t _bot;
-		_bot.id = json_object_get_string(json_object_object_get(output_user, "id"));
-		_bot.username = json_object_get_string(json_object_object_get(output_user, "username"));
-		_bot.discriminator = json_object_get_string(json_object_object_get(output_user, "discriminator"));
-		_bot.avatar = json_object_get_string(json_object_object_get(output_user, "avatar"));
-		_bot.bot = json_object_get_int(json_object_object_get(output_user, "bot"));
-		_bot.mfa_enabled = json_object_get_int(json_object_object_get(output_user, "mfa_enabled"));
-		_bot.verified = json_object_get_int(json_object_object_get(output_user, "verified"));
-		_bot.email = json_object_get_string(json_object_object_get(output_user, "email"));
-        bot = _bot;
+        json_object *output_user = json_object_object_get(json_object_object_get(m, "d"), "user");
+        bot = user(output_user);
     }
     if (strcmp(json_object_get_string(t), "MESSAGE_CREATE") == 0) {
-        json_object *output = json_object_object_get(message, "d");
-        json_object *_author = json_object_object_get(output, "author");
+        json_object *output = json_object_object_get(m, "d");
 
-        user_t author;
-		author.id = json_object_get_string(json_object_object_get(_author, "id"));
-		author.username = json_object_get_string(json_object_object_get(_author, "username"));
-		author.discriminator = json_object_get_string(json_object_object_get(_author, "discriminator"));
-		author.avatar = json_object_get_string(json_object_object_get(_author, "avatar"));
-		author.bot = json_object_get_int(json_object_object_get(_author, "bot"));
-		author.mfa_enabled = json_object_get_int(json_object_object_get(_author, "mfa_enabled"));
-		author.verified = json_object_get_int(json_object_object_get(_author, "verified"));
-		author.email = json_object_get_string(json_object_object_get(_author, "email"));
-
-		// json_object *mentions;
-
-		// if (json_object_object_get(output, "mentions")) {
-		// 	mentions = json_object_object_get(output, "mentions");
-		// 	user_t mentions_array[json_object_array_length(mentions)];
-		// 	for (int i = 0; i <= json_object_array_length(mentions); i++) {
-		// 		json_object *curr = json_object_array_get_idx(mentions, i);
-		// 		mentions_array[i].id = json_object_get_string(json_object_object_get(curr, "id"));
-		// 		mentions_array[i].username = json_object_get_string(json_object_object_get(curr, "username"));
-		// 		mentions_array[i].discriminator = json_object_get_string(json_object_object_get(curr, "discriminator"));
-		// 		mentions_array[i].avatar = json_object_get_string(json_object_object_get(curr, "avatar"));
-		// 		mentions_array[i].bot = json_object_get_int(json_object_object_get(curr, "bot"));
-		// 		mentions_array[i].mfa_enabled = json_object_get_int(json_object_object_get(curr, "mfa_enabled"));
-		// 		mentions_array[i].verified = json_object_get_int(json_object_object_get(curr, "verified"));
-		// 		mentions_array[i].email = json_object_get_string(json_object_object_get(curr, "email"));
-		// 	}
-		// }
-
-        message_t msg;
-		msg.id = json_object_get_string(json_object_object_get(output, "id"));
-		msg.author = author;
-		msg.channel_id = json_object_get_string(json_object_object_get(output, "channel_id"));
-		msg.timestamp = json_object_get_string(json_object_object_get(output, "timestamp"));
-		msg.edited_timestamp = json_object_get_string(json_object_object_get(output, "edited_timestamp"));
-		msg.tts = json_object_get_int(json_object_object_get(output, "tts"));
-		msg.mention_everyone = json_object_get_int(json_object_object_get(output, "mention_everyone"));
-		msg.pinned = json_object_get_int(json_object_object_get(output, "pinned"));
-		msg.webhook_id = json_object_get_string(json_object_object_get(output, "webhook_id"));
-		msg.content = json_object_get_string(json_object_object_get(output, "content"));
+        message_t msg = message(output);
 
         on_discord_message(msg, config);
     }
