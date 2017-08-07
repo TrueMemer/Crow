@@ -22,10 +22,10 @@
 #include "rest.h"
 #include "log.h"
 #include "types.h"
+#include "config.h"
 
 int startsWith(const char *a, const char *b);
 
 extern user_t bot;
-extern const char *token;
 
 #endif

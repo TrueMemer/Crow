@@ -21,8 +21,11 @@
 
 #include <getopt.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <pwd.h>
 
-const char *token;
+struct cfg_struct *config;
+char *homedir;
 char *bot_prefix;
 int done;
 user_t bot; // Our bot user
@@ -43,6 +46,7 @@ usage(void)
 	fprintf(stderr, " -h, --help         display help and exit\n");
 	fprintf(stderr, " -v, --version      print version and exit\n");
 	fprintf(stderr, " -t, --token        your bot token. REQUIRED\n");
+	fprintf(stderr, " -s, --save         save internal config struct to ~/.crowrc\n");
 	fprintf(stderr, "\n");
 	//fprintf(stderr, "see manual page " PACKAGE "(8) for more information\n");
 }
@@ -52,8 +56,7 @@ usage(void)
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 int 
 onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
-    json_object *message;
-    message = json_tokener_parse(msg->payload);
+    json_object *message = json_tokener_parse(msg->payload);
     json_object *t;
     t = json_object_object_get(message, "t");
     log_debug("Got new event \"%s\"\n", json_object_get_string(t));
@@ -115,7 +118,7 @@ onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
 		msg.webhook_id = json_object_get_string(json_object_object_get(output, "webhook_id"));
 		msg.content = json_object_get_string(json_object_object_get(output, "content"));
 
-        on_discord_message(msg);
+        on_discord_message(msg, config);
     }
 	// if (strcmp(json_object_get_string(t), "PRESENCE_UPDATE") == 0) {
 	// 	log_debug("websocket", msg->payload);
@@ -185,7 +188,7 @@ void
 onopen(wsclient *c) {
     log_info("onopen websocket function is called!");
     char _token[1024];
-    snprintf(_token, sizeof(_token), "{\"op\":2,\"d\":{\"token\":\"%s\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}", token);
+    snprintf(_token, sizeof(_token), "{\"op\":2,\"d\":{\"token\":\"%s\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}", cfg_get(config, "token"));
     json_object *response = json_tokener_parse(_token);
     libwsclient_send(c, json_object_to_json_string(response));
 }
@@ -194,18 +197,25 @@ onopen(wsclient *c) {
 int
 main(int argc, char *argv[])
 {
+	config = cfg_init();
+
 	int ch;
+	int save = 0;
+	int no_config;
+	char *token;
 
 	static struct option long_options[] = {
                 { "debug", no_argument, 0, 'd' },
                 { "help",  no_argument, 0, 'h' },
                 { "version", no_argument, 0, 'v' },
-				{ "token", required_argument, 0, 't'},
+				{ "token", optional_argument, 0, 't'},
+				{ "config", optional_argument, 0, 'c'},
+				{ "save", no_argument, 0, 's' },
 		{ 0 }
 	};
 	while (1) {
 		int option_index = 0;
-		ch = getopt_long(argc, argv, "hvdD:",
+		ch = getopt_long(argc, argv, "hvsdD:",
 		    long_options, &option_index);
 		if (ch == -1) break;
 		switch (ch) {
@@ -220,8 +230,15 @@ main(int argc, char *argv[])
 		case 'd':
 			log_set_level(LOG_DEBUG);
 			break;
+		case 's':
+			save = 1;
+			break;
+		case 'c':
+			homedir = optarg;
+			break;
 		case 't':
 			token = optarg;
+			cfg_set(config, "token", optarg);
 			break;
 		default:
 			fprintf(stderr, "unknown option `%c'\n", ch);
@@ -230,11 +247,39 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (!token) {
+	if (!homedir) {
+		if ((homedir = getenv("HOME")) == NULL) {
+    		homedir = getpwuid(getuid())->pw_dir;
+		}
+		strcat(homedir, "/.crowrc");
+		printf("%s", homedir);
+	}
+
+	// default prefix
+	cfg_set(config, "bot_prefix", "??");
+
+	int loaded = cfg_load(config, homedir);
+
+	if (loaded < 0) {
+		no_config = 1;
+	} else {
+		if (!token) {
+			cfg_set(config, "token", cfg_get(config, "token"));
+		}
+		cfg_set(config, "bot_prefix", cfg_get(config, "bot_prefix"));
+	}
+
+	if ( (no_config && !token) || (cfg_get(config, "token") == NULL) ) {
 		fprintf(stderr, "no token provided\n");
 		usage();
 		exit(1);
 	}
+
+	if (save) {
+		cfg_save(config, homedir);
+	}
+
+	token = cfg_get(config, "token");
 
 	init_curl(token);
 
