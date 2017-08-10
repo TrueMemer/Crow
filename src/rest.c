@@ -121,6 +121,8 @@ add_reaction(char* channel_id, char *message_id, char *emoji) {
     log_debug("Request URL: %s\n", req.url);
     log_debug("Response Code: %lu\n", req.code);
     log_debug("Response Body:\n%s", req.text);
+
+    requests_close(&req);
 }
 
 // void
