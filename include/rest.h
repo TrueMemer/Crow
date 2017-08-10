@@ -22,6 +22,7 @@
 #include <json.h>
 
 #include "crow.h"
+#include "types.h"
 
 void init_curl();
 void send_message(char *channel_id, char *text);

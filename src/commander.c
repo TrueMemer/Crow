@@ -15,20 +15,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../include/crow.h"
 #include "../include/commander.h"
 
 #include <string.h>
 
 void 
-on_discord_message(message_t msg, struct cfg_struct *config) {
-	char *BOT_PREFIX = cfg_get(config, "bot_prefix");
-	if (BOT_PREFIX == NULL) {
-		return;
-	}
-	if (strcmp(msg.author.id, bot.id)) {
-		if (startsWith(msg.content, BOT_PREFIX)) {
-			msg.content = msg.content + strlen(BOT_PREFIX);
+on_discord_message(client_t *bot, message_t msg) {
+	log_debug(bot->bot_prefix);
+	if (strcmp(msg.author.id, bot->self.id)) {
+		if (startsWith(msg.content, bot->bot_prefix)) {
+			msg.content = msg.content + strlen(bot->bot_prefix);
 
 			if (!strcmp("ping", msg.content)) {
 				send_message(msg.channel_id, "Pong!");

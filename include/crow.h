@@ -18,14 +18,14 @@
 #ifndef _CROW_H
 #define _CROW_H
 
-#include "commander.h"
+#include "../deps/libwsclient/wsclient.h"
+
 #include "rest.h"
 #include "log.h"
 #include "types.h"
 #include "config.h"
+#include "commander.h"
 
 int startsWith(const char *a, const char *b);
-
-extern user_t bot;
 
 #endif

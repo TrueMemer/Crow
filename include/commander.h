@@ -20,8 +20,9 @@
 
 #include "types.h"
 #include "config.h"
+#include "crow.h"
 
-void on_discord_message(message_t msg, struct cfg_struct *config);
+void on_discord_message(client_t *bot, message_t msg);
 void on_presence_update(presence_update_t upd);
 
 #endif

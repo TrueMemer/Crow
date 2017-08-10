@@ -1,6 +1,8 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
+#include "../deps/libwsclient/wsclient.h"
+
 #include <unistd.h>
 #include <json.h>
 
@@ -12,6 +14,21 @@ enum game_types {
 enum channel_types {
     TEXT = 0,
     VOICE = 1
+};
+
+enum {
+    DISPATCH,
+    HEARTBEAT,
+    IDENTIFY,
+    PRESENCE,
+    VOICE_STATE,
+    VOICE_PING,
+    RESUME,
+    RECONNECT,
+    REQUEST_MEMBERS,
+    INVALIDATE_SESSION,
+    HELLO,
+    HEARTBEAT_ACK
 };
 
 typedef struct curl_fetch_st {
@@ -158,6 +175,20 @@ typedef struct message {
     int pinned;
     char* webhook_id;
 } message_t;
+
+typedef struct Client {
+	wsclient *ws;
+	struct cfg_struct *config;
+	char *bot_prefix;
+	char *homedir;
+    char *session_id;
+	int done;
+	int hello;
+	int hrtb_interval;
+	int hrtb_acks;
+	int seq;
+	user_t self;
+} client_t;
 
 user_t user(json_object *raw);
 message_t message(json_object *raw);

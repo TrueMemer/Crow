@@ -24,11 +24,9 @@
 #include <sys/types.h>
 #include <pwd.h>
 
-struct cfg_struct *config;
-char *homedir;
-char *bot_prefix;
-int done;
-user_t bot; // Our bot user
+// Better but still gross
+
+client_t bot;
 
 int startsWith(const char *a, const char *b)
 {
@@ -51,78 +49,59 @@ usage(void)
 	//fprintf(stderr, "see manual page " PACKAGE "(8) for more information\n");
 }
 
-// Ignore deprecated function and discarded qualifiers
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
-int 
-onmessage(wsclient *c, wsclient_message *msg, CURL *curl) {
+void handshake(wsclient *c) {
+	char _token[1024];
+    snprintf(_token, sizeof(_token), "{\"op\":2,\"d\":{\"token\":\"%s\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}", cfg_get(bot.config, "token"));
+    json_object *response = json_tokener_parse(_token);
+    libwsclient_send(c, json_object_to_json_string(response));
+}
+
+int
+onmessage(wsclient *c, wsclient_message *msg) {
     json_object *m = json_tokener_parse(msg->payload);
-    json_object *t;
-    t = json_object_object_get(m, "t");
-    log_debug("Got new event \"%s\"\n", json_object_get_string(t));
-    if (strcmp(json_object_get_string(t), "READY") == 0) {
-        json_object *output_user = json_object_object_get(json_object_object_get(m, "d"), "user");
-        bot = user(output_user);
-    }
-    if (strcmp(json_object_get_string(t), "MESSAGE_CREATE") == 0) {
-        json_object *output = json_object_object_get(m, "d");
 
-        message_t msg = message(output);
+	json_object *_op;
 
-        on_discord_message(msg, config);
-    }
-	// if (strcmp(json_object_get_string(t), "PRESENCE_UPDATE") == 0) {
-	// 	log_debug("websocket", msg->payload);
-	// 	json_object *output = json_object_object_get(message, "d");
-	// 	json_object *output_user = json_object_object_get(output, "user");
-	// 	presence_update_t upd;
-	// 	user_t upd_user;
+	json_object_object_get_ex(m, "op", &_op);
 
-	// 	upd_user.id = json_object_get_string(json_object_object_get(output_user, "id"));
+	if (json_object_get_type(_op) == json_type_null) {
+		log_warn("recieved a message with unknown op!");
+		return;
+	}
 
-	// 	upd.user = upd_user;
-	// 	json_object *_roles_array = json_object_object_get(output, "roles");
-	// 	array_list *_roles_array_list = json_object_get_array(_roles_array);
+	int op = json_object_get_int(_op);
 
-	// 	for (int i = 0; i < _roles_array_list->length; i++) {
-	// 		upd.roles[i] = json_object_array_get_idx(_roles_array_list, i);
-	// 	}
+	switch (op) {
+		case DISPATCH:
+			dispatch(&bot, m);
+			break;
+		case HELLO:
+			if (!bot.hello) {
+				bot.hello = 1;
+				json_object *hello_;
+				json_object *d;
+				json_object_object_get_ex(json_tokener_parse(msg->payload), "d", &d);
+				json_object_object_get_ex(d, "heartbeat_interval", &hello_);
+				bot.hrtb_interval = json_object_get_int(hello_);
 
-	// 	int is_game_null = json_object_get_type(json_object_object_get(output, "game"));
+				json_object_put(hello_);
+				json_object_put(d);
+				handshake(c);
+				break;
+			}
+		case HEARTBEAT_ACK:
+			log_debug("heartbeat acks!");
+			bot.hrtb_acks = 1;
+			break;
+	}
 
-	// 	json_object *game_object;
-
-	// 	switch (is_game_null) {
-	// 		case json_type_null:
-	// 			break;
-	// 		case json_type_object:
-			
-	// 			game_object = json_object_object_get(output, "game");
-	// 			game_t game;
-
-	// 			game.name = json_object_get_string(json_object_object_get(game_object, "name"));
-	// 			game.type = json_object_get_int(json_object_object_get(game_object, "type"));
-	// 			game.url = json_object_get_string(json_object_object_get(game_object, "url"));
-
-	// 			upd.game = game;
-
-	// 			break;
-	// 		default:
-	// 			break;
-	// 	}
-
-	// 	upd.guild_id = json_object_get_string(json_object_object_get(output, "guild_id"));
-	// 	upd.status = json_object_get_string(json_object_object_get(output, "status"));
-
-	// 	on_presence_update(upd);
-	// }
-    return 0;
+    return;
 }
 
 void 
 onclose(wsclient *c) {
-    log_warn("WS server closed the connection!");
-    done = 1;
+    log_warn("ws closed: %d", c->sockfd);
+    bot.done = 1;
 }
 
 void 
@@ -132,28 +111,47 @@ onerror(wsclient *c, wsclient_error *err) {
         errno = err->extra_code;
         perror("recv");
     }
-    done = 1;
+    bot.done = 1;
 }
 
 void 
 onopen(wsclient *c) {
     log_info("onopen websocket function is called!");
-    char _token[1024];
-    snprintf(_token, sizeof(_token), "{\"op\":2,\"d\":{\"token\":\"%s\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}", cfg_get(config, "token"));
-    json_object *response = json_tokener_parse(_token);
-    libwsclient_send(c, json_object_to_json_string(response));
+	return;
 }
 
+void reconnect(client_t *bot) {
+	libwsclient_finish(bot->ws);
+
+	bot->ws = libwsclient_new("wss://gateway.discord.gg/?v=6&encoding=json");
+
+	if(!bot->ws) {
+		log_fatal("unable to reinitialize new WS client!");
+		exit(1);
+	}
+
+	libwsclient_onopen(bot->ws, &onopen);
+	libwsclient_onmessage(bot->ws, &onmessage);
+	libwsclient_onerror(bot->ws, &onerror);
+	libwsclient_onclose(bot->ws, &onclose);
+
+	libwsclient_run(bot->ws);
+
+	log_info("reconnected!");
+}
 
 int
 main(int argc, char *argv[])
 {
-	config = cfg_init();
+	bot.config = cfg_init();
+	bot.hrtb_interval = 2000;
+	bot.hrtb_acks = 1;
+	bot.seq = 0;
 
 	int ch;
 	int save = 0;
 	int no_config;
-	char *token;
+	const char *token;
 
 	static struct option long_options[] = {
                 { "debug", no_argument, 0, 'd' },
@@ -185,11 +183,11 @@ main(int argc, char *argv[])
 			save = 1;
 			break;
 		case 'c':
-			homedir = optarg;
+			bot.homedir = optarg;
 			break;
 		case 't':
 			token = optarg;
-			cfg_set(config, "token", optarg);
+			cfg_set(bot.config, "token", optarg);
 			break;
 		default:
 			fprintf(stderr, "unknown option `%c'\n", ch);
@@ -198,71 +196,93 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (!homedir) {
-		if ((homedir = getenv("HOME")) == NULL) {
-    		homedir = getpwuid(getuid())->pw_dir;
+	if (!bot.homedir) {
+		if ((bot.homedir = getenv("HOME")) == NULL) {
+    		bot.homedir = getpwuid(getuid())->pw_dir;
 		}
-		strcat(homedir, "/.crowrc");
-		printf("%s", homedir);
+		strcat(bot.homedir, "/.crowrc");
 	}
 
-	// default prefix
-	cfg_set(config, "bot_prefix", "??");
-
-	int loaded = cfg_load(config, homedir);
+	int loaded = cfg_load(bot.config, bot.homedir);
 
 	if (loaded < 0) {
 		no_config = 1;
 	} else {
-		if (!token) {
-			cfg_set(config, "token", cfg_get(config, "token"));
-		}
-		cfg_set(config, "bot_prefix", cfg_get(config, "bot_prefix"));
+		// if (!token) {
+		// 	cfg_set(bot.config, "token", cfg_get(bot.config, "token"));
+		// }
+		// bot.bot_prefix = cfg_get(bot.config, "bot_prefix");
+
+		// log_debug(bot.bot_prefix);
+
+		// if (bot.bot_prefix == NULL) {
+		// 	bot.bot_prefix = "??";
+		// }
 	}
 
-	if ( (no_config && !token) || (cfg_get(config, "token") == NULL) ) {
+	log_debug(cfg_get(bot.config, "bot_prefix"));
+
+	bot.bot_prefix = cfg_get(bot.config, "bot_prefix");
+
+	if ( (no_config && !token) || (cfg_get(bot.config, "token") == NULL) ) {
 		fprintf(stderr, "no token provided\n");
 		usage();
 		exit(1);
 	}
 
 	if (save) {
-		cfg_save(config, homedir);
+		cfg_save(bot.config, bot.homedir);
 	}
 
-	token = cfg_get(config, "token");
+	token = cfg_get(bot.config, "token");
 
 	init_curl(token);
 
 	log_info("starting with token %s", token);
 
-	wsclient *client = libwsclient_new("wss://gateway.discord.gg");
+	bot.ws = libwsclient_new("wss://gateway.discord.gg/?v=6&encoding=json");
 
 	log_info("initializing Websocket client...");
 
-	if(!client) {
+	if(!bot.ws) {
 		log_fatal("unable to initialize new WS client!");
 		exit(1);
 	}
 
-	libwsclient_onopen(client, &onopen);
-	libwsclient_onmessage(client, &onmessage);
-	libwsclient_onerror(client, &onerror);
-	libwsclient_onclose(client, &onclose);
+	libwsclient_onopen(bot.ws, &onopen);
+	libwsclient_onmessage(bot.ws, &onmessage);
+	libwsclient_onerror(bot.ws, &onerror);
+	libwsclient_onclose(bot.ws, &onclose);
 
-	libwsclient_run(client);
+	libwsclient_run(bot.ws);
 
 	log_info("WS client thread is running...");
 
 	fflush(stdout);
-	sleep(2);
-    while(!done) {
-            libwsclient_send(client, "{\"op\": 1, \"d\": null}");
-            fflush(stdout);
-            sleep(5);
+    while(!bot.done) {
+		if (bot.hello) {
+			if (!bot.hrtb_acks) {
+				log_debug("zombie! reconnecting...");
+				reconnect(&bot);
+				continue;
+			}
+			json_object *heartbeat;
+
+			heartbeat = json_object_new_object();
+			json_object_object_add(heartbeat, "op", json_object_new_int(1));
+			json_object_object_add(heartbeat, "d", json_object_new_int(bot.seq));
+
+			libwsclient_send(bot.ws, json_object_to_json_string(heartbeat));
+			fflush(stdout);
+			log_debug("sleeping for %d", bot.hrtb_interval * 1000);
+			//log_debug("hrtb: %s", json_object_to_json_string(heartbeat));
+			json_object_put(heartbeat);
+			bot.hrtb_acks = 0;
+			usleep(bot.hrtb_interval * 1000);
+		}
 	}
 
-	libwsclient_finish(client);
+	libwsclient_finish(bot.ws);
 
 	return EXIT_SUCCESS;
 }
