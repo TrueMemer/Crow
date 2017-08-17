@@ -4,3 +4,5 @@
 *.a
 *.la
 crow
+config.mk
+.vscode/

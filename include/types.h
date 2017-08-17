@@ -176,20 +176,6 @@ typedef struct message {
     char* webhook_id;
 } message_t;
 
-typedef struct Client {
-	wsclient *ws;
-	struct cfg_struct *config;
-	char *bot_prefix;
-	char *homedir;
-    char *session_id;
-	int done;
-	int hello;
-	int hrtb_interval;
-	int hrtb_acks;
-	int seq;
-	user_t self;
-} client_t;
-
 user_t user(json_object *raw);
 message_t message(json_object *raw);
 
