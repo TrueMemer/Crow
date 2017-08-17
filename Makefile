@@ -1,7 +1,9 @@
+include config.mk
+
 TARGET = crow
-LIBS = -ljson-c -lcurl -lssl -lcrypt -lpthread
+LIBS = -ljson-c -lcurl -lssl -lcrypt -lpthread 
 CC = gcc
-CFLAGS = -g -Wall -I/usr/include/json-c
+CFLAGS = -g -Wall -I/usr/include/json-c -DTOKEN=\"$(TOKEN)\" -DPREFIX=\"$(PREFIX)\"
 
 .PHONY: default all clean
 

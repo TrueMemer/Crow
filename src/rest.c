@@ -1,28 +1,6 @@
-/* -*- mode: c; c-file-style: "openbsd" -*- */
-/*
- * Copyright (c) 2017, Alexander Memer <mkoaleksedos@gmail.com>
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, 
- * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
- * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include "../include/rest.h"
+#include "../include/log.h"
 #include "../deps/librequests/include/requests.h"
-
-char header[1024];
-
-void init_curl(char *token) {
-    sprintf(header, "Authorization: Bot %s", token);
-}
 
 void
 send_message(char* channel_id, char* text) {
@@ -36,9 +14,10 @@ send_message(char* channel_id, char* text) {
 	char target[1024];
 	sprintf(target, "https://discordapp.com/api/channels/%s/messages", channel_id);
 
-    char *auth_header[] = {
-        header
-    };
+    char header[1024];
+    sprintf(header, "Authorization: Bot %s", TOKEN);
+
+    char *auth_header[] = { header };
 
 	requests_post_headers(curl, &req, target, json_object_to_json_string(tosend), auth_header, sizeof(auth_header)/sizeof(char*));
 
@@ -60,9 +39,10 @@ get_channel(char* channel_id) {
 
 	sprintf(target, "https://discordapp.com/api/channels/%s", channel_id);
 
-    char *auth_header[] = {
-        header
-    };
+    char header[1024];
+    sprintf(header, "Authorization: Bot %s", TOKEN);
+
+    char *auth_header[] = { header };
 
 	requests_get_headers(curl, &req, target, auth_header, sizeof(auth_header)/sizeof(char*));
 
@@ -110,9 +90,10 @@ add_reaction(char* channel_id, char *message_id, char *emoji) {
 
 	char target[1024];
 
-    char *auth_header[] = {
-        header
-    };
+    char header[1024];
+    sprintf(header, "Authorization: Bot %s", TOKEN);
+
+    char *auth_header[] = { header };
 
 	sprintf(target, "https://discordapp.com/api/channels/%s/messages/%s/reactions/%s/@me",channel_id, message_id, emoji);
 
@@ -121,6 +102,8 @@ add_reaction(char* channel_id, char *message_id, char *emoji) {
     log_debug("Request URL: %s\n", req.url);
     log_debug("Response Code: %lu\n", req.code);
     log_debug("Response Body:\n%s", req.text);
+
+    requests_close(&req);
 }
 
 // void

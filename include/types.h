@@ -1,6 +1,8 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
+#include "../deps/libwsclient/wsclient.h"
+
 #include <unistd.h>
 #include <json.h>
 
@@ -12,6 +14,21 @@ enum game_types {
 enum channel_types {
     TEXT = 0,
     VOICE = 1
+};
+
+enum {
+    DISPATCH,
+    HEARTBEAT,
+    IDENTIFY,
+    PRESENCE,
+    VOICE_STATE,
+    VOICE_PING,
+    RESUME,
+    RECONNECT,
+    REQUEST_MEMBERS,
+    INVALIDATE_SESSION,
+    HELLO,
+    HEARTBEAT_ACK
 };
 
 typedef struct curl_fetch_st {
