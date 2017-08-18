@@ -13,6 +13,8 @@ typedef struct Client {
 	int hrtb_acks;
 	int seq;
 	user_t self;
+	void (*on_message)(struct Client *client, message_t msg);
+	void (*on_ready)(struct Client *client);
 } client_t;
 
 int client_init(client_t *client);

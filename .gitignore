@@ -6,3 +6,4 @@
 crow
 config.mk
 .vscode/
+deps/libwsclient

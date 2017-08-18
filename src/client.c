@@ -116,7 +116,6 @@ void heartbeat(client_t *client) {
 			libwsclient_send(client->ws, json_object_to_json_string(heartbeat));
 			fflush(stdout);
 			log_debug("sleeping for %d", client->hrtb_interval * 1000);
-			//log_debug("hrtb: %s", json_object_to_json_string(heartbeat));
 			json_object_put(heartbeat);
 			client->hrtb_acks = 0;
 			usleep(client->hrtb_interval * 1000);
@@ -134,6 +133,9 @@ int client_init(client_t *client) {
 	client->hrtb_interval = 2000;
 	client->hrtb_acks = 1;
 	client->seq = 0;
+
+	client->on_message = NULL;
+	client->on_ready = NULL;
 
 	client->ws = libwsclient_new("wss://gateway.discord.gg/?v=6&encoding=json");
 

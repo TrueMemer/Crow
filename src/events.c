@@ -1,6 +1,5 @@
 #include "../include/events.h"
 #include "../include/log.h"
-#include "../include/commander.h"
 
 void dispatch(client_t *bot, json_object *data) {
 
@@ -25,6 +24,12 @@ void dispatch(client_t *bot, json_object *data) {
         bot->self = user(output_user);
 
 		json_object_put(_d);
+
+        if (!bot->on_ready) {
+            return;
+        }
+
+        bot->on_ready(bot);
     }
     if (strcmp(json_object_get_string(t), "MESSAGE_CREATE") == 0) {
         json_object *output; 
@@ -32,7 +37,12 @@ void dispatch(client_t *bot, json_object *data) {
 
         message_t msg = message(output);
 
-        on_discord_message(&bot, msg);
+        if (!bot->on_message) {
+            log_debug("on_message handler is not set!");
+            return;
+        }
+
+        bot->on_message(bot, msg);
     }
 
 }
