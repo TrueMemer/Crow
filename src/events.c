@@ -1,5 +1,5 @@
-#include "../include/events.h"
-#include "../include/log.h"
+#include <crow/events.h>
+#include <crow/log.h>
 
 void dispatch(client_t *bot, json_object *data) {
 

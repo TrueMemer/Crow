@@ -1,8 +1,8 @@
-#include "../include/client.h"
-#include "../include/events.h"
-#include "../include/log.h"
+#include <crow/client.h>
+#include <crow/events.h>
+#include <crow/log.h>
 
-#include <json.h>
+#include <json-c/json.h>
 
 client_t *g_client;
 

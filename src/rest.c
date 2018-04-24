@@ -1,6 +1,6 @@
-#include "../include/rest.h"
-#include "../include/log.h"
-#include "../deps/librequests/include/requests.h"
+#include <crow/rest.h>
+#include <crow/log.h>
+#include <requests.h>
 
 void
 send_message(char* channel_id, char* text) {

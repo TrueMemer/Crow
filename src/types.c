@@ -1,7 +1,7 @@
-#include "../include/types.h"
-#include "../include/log.h"
+#include <crow/types.h>
+#include <crow/log.h>
 
-#include <json.h>
+#include <json-c/json.h>
 
 user_t user(json_object *raw) {
     user_t u;
