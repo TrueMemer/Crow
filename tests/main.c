@@ -1,6 +1,6 @@
-#include "../include/client.h"
-#include "../include/types.h"
-#include "../include/rest.h"
+#include <crow/client.h>
+#include <crow/types.h>
+#include <crow/rest.h>
 
 #include <stdio.h>
 

@@ -1,8 +1,8 @@
 # Crow
 
-Discord bot written in C.
+Discord API library written in C.
 
-Tested on Ubuntu 16.10 yakkety and WSL.
+Tested on Fedora.
 
 This software is under heavy development and very unstable so I don't recommend to use it.
 
@@ -47,6 +47,8 @@ This software is under heavy development and very unstable so I don't recommend 
 - [ ] Webhook (nothing implemented yet and not planned)
 
 ## Installation
+
+NOTE: This guide is outdated.
 
 This is an example for installation on debian-based linux distributions.
 

@@ -1,9 +1,7 @@
 *~
 *.o
 *.lo
-*.a
 *.la
 crow
-config.mk
 .vscode/
-deps/libwsclient
+build/
