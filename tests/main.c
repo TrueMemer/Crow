@@ -46,13 +46,11 @@ on_discord_message(client_t *bot, message_t msg) {
 }
 
 int main(void) {
-	client_t bot;
+	client_t *bot = client_init();
 
-	client_init(&bot);
+	bot->on_message = &on_discord_message;
 
-	bot.on_message = &on_discord_message;
-
-	client_run(&bot);
+	client_run(bot);
 
 	return 0;
 }
