@@ -18,7 +18,7 @@ on_discord_message(client_t *bot, message_t msg)
 	{
 		if (startsWith(msg.content, PREFIX)) 
 		{
-			
+
 			msg.content = msg.content + strlen(PREFIX);
 
 			if (!strcmp("ping", msg.content)) 
@@ -54,6 +54,13 @@ on_discord_message(client_t *bot, message_t msg)
 				snprintf(to_send, sizeof(to_send), "Hi, %s!", msg.author.username);
 
 				send_message(msg.channel_id, to_send);
+			}
+
+			if (!strcmp("reconnect", msg.content)) 
+			{
+				send_message(msg.channel_id, "Reconnecting...");
+
+				crow_reconnect(bot);
 			}
 
 		}

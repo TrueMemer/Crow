@@ -2,8 +2,11 @@
 #include <crow/log.h>
 #include <requests.h>
 
+#define API_ENDPOINT "https://discordapp.com/api"
+
 void
-send_message(char* channel_id, char* text) {
+send_message(char* channel_id, char* text) 
+{
     req_t req;
 	CURL *curl = requests_init(&req);
 
@@ -31,7 +34,8 @@ send_message(char* channel_id, char* text) {
 }
 
 guild_channel_t
-get_channel(char* channel_id) {
+get_channel(char* channel_id) 
+{
 	req_t req;
 	CURL *curl = requests_init(&req);
 
@@ -84,7 +88,8 @@ get_channel(char* channel_id) {
 }
 
 void
-add_reaction(char* channel_id, char *message_id, char *emoji) {
+add_reaction(char* channel_id, char *message_id, char *emoji) 
+{
 	req_t req;
 	CURL *curl = requests_init(&req);
 

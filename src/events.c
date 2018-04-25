@@ -21,6 +21,15 @@ void dispatch(client_t *bot, json_object *data)
 
 		json_object_object_get_ex(data, "d", &_d);
 
+        log_debug(json_object_get_string(_d));
+
+        json_object *session_id;
+        json_object_object_get_ex(_d, "session_id", &session_id);
+
+        bot->session_id = json_object_get_string(session_id);
+
+        log_debug("Session id: %s", bot->session_id);
+
 		json_object *output_user;
 		json_object_object_get_ex(_d, "user", &output_user);
         bot->self = user(output_user);

@@ -21,5 +21,6 @@ typedef struct Client {
 client_t *crow_new();
 void crow_run(client_t *client);
 void crow_finish(client_t *client);
+void crow_reconnect(client_t *client);
 
 #endif // _CLIENT_H_

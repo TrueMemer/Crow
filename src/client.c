@@ -67,7 +67,7 @@ int onmessage(wsclient *c, wsclient_message *msg)
 		case RECONNECT:
 		{
 			log_warn("got RESUME event! reconnecting...");
-			reconnect(ptr);
+			crow_reconnect(ptr);
 			break;
 		}
 
@@ -99,16 +99,29 @@ onopen(wsclient *c)
 	return;
 }
 
-void reconnect(client_t *client) 
+void crow_reconnect(client_t *client)
 {
-	/* TODO: Rewrite and test it
+
 	client->hello = 0;
 
-	client_finish(client);
+	libwsclient_finish(client->ws);
 	
-	client_init(client);
+	client->ws = libwsclient_new("wss://gateway.discord.gg/?v=6&encoding=json", (void *)&client);
 
-	client_run(client);
+	log_info("Reconnecting to websocket server...");
+
+	if(!client->ws) 
+	{
+		log_fatal("unable to initialize new WS client!");
+		return NULL;
+	}
+
+	libwsclient_onopen(client->ws, &onopen);
+	libwsclient_onmessage(client->ws, &onmessage);
+	libwsclient_onerror(client->ws, &onerror);
+	libwsclient_onclose(client->ws, &onclose);
+
+	crow_run(client);
 
 	json_object *resume = json_object_new_object();
 
@@ -121,9 +134,7 @@ void reconnect(client_t *client)
 	log_debug(json_object_to_json_string(resume));
 
 	client->hello = 1;
-	*/
-	log_fatal("Reconnect function is not implemented yet. Please restart application.");
-	crow_finish(client);
+
 }
 
 void heartbeat(client_t *client) 
@@ -172,6 +183,11 @@ void crow_finish(client_t *client)
 {
 	libwsclient_finish(client->ws);
 	client->done = 1;
+}
+
+void crow_destroy_client(client_t *client)
+{
+	free(client);
 }
 
 client_t *crow_new() 
