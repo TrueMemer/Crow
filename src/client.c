@@ -57,6 +57,29 @@ int onmessage(wsclient *c, wsclient_message *msg)
 			break;
 		}
 
+		case INVALIDATE_SESSION:
+		{
+			// NOTE: This is untested
+			log_warn("Recieved INVALIDATE_SESSION opcode");
+
+			json_object *_d;
+			json_object_object_get_ex(m, "d", &_d);
+
+			int resumable = json_object_get_boolean(_d);
+
+			if (!resumable)
+			{
+				log_fatal("Current session is not resumable. User action required.");
+				crow_destroy_client(client);
+			} else 
+			{
+				log_warn("Session is resumable, trying to reconnect...");
+				crow_reconnect(client);
+			}
+
+			break;
+		}
+
 		case HEARTBEAT_ACK:
 		{
 			log_debug("heartbeat acks!");
@@ -187,6 +210,7 @@ void crow_finish(client_t *client)
 
 void crow_destroy_client(client_t *client)
 {
+	crow_finish(client);
 	free(client);
 }
 
