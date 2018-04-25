@@ -3,7 +3,8 @@
 
 #include <json-c/json.h>
 
-user_t user(json_object *raw) {
+user_t user(json_object *raw) 
+{
     user_t u;
 
     json_object *id;
@@ -41,7 +42,8 @@ user_t user(json_object *raw) {
     return u;
 }
 
-message_t message(json_object *raw) {
+message_t message(json_object *raw) 
+{
     message_t msg;
 
     msg.id = json_object_get_string(json_object_object_get(raw, "id"));

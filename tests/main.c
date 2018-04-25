@@ -11,18 +11,28 @@ int startsWith(const char *a, const char *b)
 }
 
 void 
-on_discord_message(client_t *bot, message_t msg) {
-	if (strcmp(msg.author.id, bot->self.id)) {
-		if (startsWith(msg.content, PREFIX)) {
+on_discord_message(client_t *bot, message_t msg) 
+{
+
+	if (strcmp(msg.author.id, bot->self.id)) 
+	{
+		if (startsWith(msg.content, PREFIX)) 
+		{
+			
 			msg.content = msg.content + strlen(PREFIX);
 
-			if (!strcmp("ping", msg.content)) {
+			if (!strcmp("ping", msg.content)) 
+			{
 				send_message(msg.channel_id, "Pong!");
 			}
-			if (!strcmp("ok", msg.content)) {
+
+			if (!strcmp("ok", msg.content)) 
+			{
 				add_reaction(msg.channel_id, msg.id, "trumpLUL:237288619088412683");
 			}
-			if (!strcmp("debug_channel", msg.content)) {
+
+			if (!strcmp("debug_channel", msg.content)) 
+			{
 				guild_channel_t channel = get_channel(msg.channel_id);
 
 				char to_send[1024];
@@ -31,26 +41,34 @@ on_discord_message(client_t *bot, message_t msg) {
 
 				send_message(msg.channel_id, to_send);
 			}
-			if (startsWith(msg.content, "echo")) {
+
+			if (startsWith(msg.content, "echo")) 
+			{
 				send_message(msg.channel_id, msg.content);
 			}
-			if (!strcmp("hi", msg.content)) {
+
+			if (!strcmp("hi", msg.content)) 
+			{
 				char to_send[1024];
 
 				snprintf(to_send, sizeof(to_send), "Hi, %s!", msg.author.username);
 
 				send_message(msg.channel_id, to_send);
 			}
+
 		}
 	}
+
 }
 
-int main(void) {
-	client_t *bot = client_init();
+int main(void) 
+{
+	client_t *bot = crow_new();
 
+	// TODO: map?
 	bot->on_message = &on_discord_message;
 
-	client_run(bot);
+	crow_run(bot);
 
 	return 0;
 }

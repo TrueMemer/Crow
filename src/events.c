@@ -1,7 +1,8 @@
 #include <crow/events.h>
 #include <crow/log.h>
 
-void dispatch(client_t *bot, json_object *data) {
+void dispatch(client_t *bot, json_object *data) 
+{
 
     json_object *t;
     json_object_object_get_ex(data, "t", &t);
@@ -14,7 +15,8 @@ void dispatch(client_t *bot, json_object *data) {
 
     log_debug("Got new event \"%s\"\n", json_object_get_string(t));
 
-    if (strcmp(json_object_get_string(t), "READY") == 0) {
+    if (strcmp(json_object_get_string(t), "READY") == 0) 
+    {
 		json_object *_d;
 
 		json_object_object_get_ex(data, "d", &_d);
@@ -25,19 +27,23 @@ void dispatch(client_t *bot, json_object *data) {
 
 		json_object_put(_d);
 
-        if (!bot->on_ready) {
+        if (!bot->on_ready) 
+        {
             return;
         }
 
         bot->on_ready(bot);
     }
-    if (strcmp(json_object_get_string(t), "MESSAGE_CREATE") == 0) {
+    
+    if (strcmp(json_object_get_string(t), "MESSAGE_CREATE") == 0) 
+    {
         json_object *output; 
 		json_object_object_get_ex(data, "d", &output);
 
         message_t msg = message(output);
 
-        if (!bot->on_message) {
+        if (!bot->on_message) 
+        {
             log_debug("on_message handler is not set!");
             return;
         }

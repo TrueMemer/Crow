@@ -4,16 +4,19 @@
 
 #include <json-c/json.h>
 
-void handshake(client_t *client) {
+void handshake(client_t *client) 
+{
 	log_debug("Handshaking...");
 	char _token[1024];
+	// TODO: Put it in json object
     snprintf(_token, sizeof(_token), "{\"op\":2,\"d\":{\"token\":\"%s\",\"v\":4,\"encoding\":\"etf\",\"properties\":{\"$os\":\"linux\",\"browser\":\"crow\",\"device\":\"crow\",\"referrer\":\"\",\"referring_domain\":\"\"},\"compress\":false,\"large_threshold\":250,\"shard\":[0,1]}}", TOKEN);
     json_object *response = json_tokener_parse(_token);
     libwsclient_send(client->ws, json_object_to_json_string(response));
 	log_debug("Handshaked!");
 }
 
-int onmessage(wsclient *c, wsclient_message *msg) {
+int onmessage(wsclient *c, wsclient_message *msg) 
+{
 
 	client_t *ptr = c->client_ptr;
 
@@ -23,65 +26,82 @@ int onmessage(wsclient *c, wsclient_message *msg) {
 
 	json_object_object_get_ex(m, "op", &_op);
 
-	if (json_object_get_type(_op) == json_type_null) {
+	if (json_object_get_type(_op) == json_type_null) 
+	{
 		log_warn("recieved a message with unknown op!");
 		return;
 	}
-
+	
 	int op = json_object_get_int(_op);
 
-	switch (op) {
-		case DISPATCH:
+	switch (op) 
+	{
+
+		case DISPATCH: 
+		{
 			dispatch(ptr, m);
 			break;
-		case 10: {
-				log_debug("Recieved HELLO");
-				ptr->hello = 1;
-				ptr->hrtb_acks = 1;
-				json_object *hello_;
-				json_object *d;
-				json_object_object_get_ex(json_tokener_parse(msg->payload), "d", &d);
-				json_object_object_get_ex(d, "heartbeat_interval", &hello_);
-				ptr->hrtb_interval = json_object_get_int(hello_);
-				handshake(ptr);
+		}
+
+		case HELLO: 
+		{
+			log_debug("Recieved HELLO");
+			ptr->hello = 1;
+			ptr->hrtb_acks = 1;
+			json_object *hello_;
+			json_object *d;
+			json_object_object_get_ex(json_tokener_parse(msg->payload), "d", &d);
+			json_object_object_get_ex(d, "heartbeat_interval", &hello_);
+			ptr->hrtb_interval = json_object_get_int(hello_);
+			handshake(ptr);
 			break;
 		}
 
 		case HEARTBEAT_ACK:
+		{
 			log_debug("heartbeat acks!");
 			ptr->hrtb_acks = 1;
 			break;
+		}
 		
 		case RECONNECT:
+		{
 			log_warn("got RESUME event! reconnecting...");
 			reconnect(ptr);
 			break;
+		}
+
 	}
 
     return;
 }
 
 void 
-onclose(wsclient *c) {
+onclose(wsclient *c) 
+{
 	client_t *ptr = c->client_ptr;
     log_warn("ws closed: %d", c->sockfd);
     ptr->done = 1;
 }
 
 void 
-onerror(wsclient *c, wsclient_error *err) {
+onerror(wsclient *c, wsclient_error *err) 
+{
 	client_t *ptr = c->client_ptr;
     log_error("error %d has occuried: %s!\n", err->code, err->str);
     ptr->done = 1;
 }
 
 void 
-onopen(wsclient *c) {
+onopen(wsclient *c) 
+{
     //log_info("onopen websocket function is called!");
 	return;
 }
 
-void reconnect(client_t *client) {
+void reconnect(client_t *client) 
+{
+	/* TODO: Rewrite and test it
 	client->hello = 0;
 
 	client_finish(client);
@@ -101,13 +121,19 @@ void reconnect(client_t *client) {
 	log_debug(json_object_to_json_string(resume));
 
 	client->hello = 1;
+	*/
+	log_fatal("Reconnect function is not implemented yet. Please restart application.");
+	crow_finish(client);
 }
 
-void heartbeat(client_t *client) {
+void heartbeat(client_t *client) 
+{
 	log_debug("HEARTBEAT: %d, %d", client->hello, client->hrtb_acks);
-	while(!client->done) {
-		if (client->hello == 1 && client->hrtb_acks == 1) {
 
+	while(!client->done) 
+	{
+		if (client->hello == 1 && client->hrtb_acks == 1) 
+		{
 			json_object *heartbeat;
 
 			log_debug("%d", client->hrtb_interval);
@@ -126,24 +152,30 @@ void heartbeat(client_t *client) {
 	}
 }
 
-void client_run(client_t *client) { 
-
+void crow_run(client_t *client) 
+{ 
 	libwsclient_run(client->ws);
 	log_info("WS client thread is running...");
 
 	client->ws->client_ptr = client;
 
-	while (!client->hello) {
+	while (!client->hello) 
+	{
 		log_debug("Waiting for HELLO...");
 		sleep(5);
 	}
-	heartbeat(client);
 
+	heartbeat(client);
 }
 
-void client_finish(client_t *client) { libwsclient_finish(client->ws); client->done = 1; }
+void crow_finish(client_t *client) 
+{
+	libwsclient_finish(client->ws);
+	client->done = 1;
+}
 
-client_t *client_init() {
+client_t *crow_new() 
+{
 
 	client_t *client = malloc(sizeof(client_t));
 
@@ -160,7 +192,8 @@ client_t *client_init() {
 
 	log_info("initializing Websocket client...");
 
-	if(!client->ws) {
+	if(!client->ws) 
+	{
 		log_fatal("unable to initialize new WS client!");
 		return NULL;
 	}
@@ -171,4 +204,5 @@ client_t *client_init() {
 	libwsclient_onclose(client->ws, &onclose);
 
 	return client;
+
 }
