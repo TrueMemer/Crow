@@ -32,6 +32,9 @@ void dispatch(client_t *bot, json_object *data)
 
 		json_object *output_user;
 		json_object_object_get_ex(_d, "user", &output_user);
+
+        
+        log_debug(json_object_get_string(output_user));
         bot->self = user(output_user);
 
 		json_object_put(_d);
@@ -41,7 +44,7 @@ void dispatch(client_t *bot, json_object *data)
             return;
         }
 
-        bot->on_ready(bot);
+        //bot->on_ready(bot);
     }
     
     if (strcmp(json_object_get_string(t), "MESSAGE_CREATE") == 0) 
@@ -57,7 +60,7 @@ void dispatch(client_t *bot, json_object *data)
             return;
         }
 
-        bot->on_message(bot, msg);
+        //bot->on_message(bot, msg);
     }
 
 }

@@ -4,6 +4,7 @@ project(crow)
 set(LIBRARY_NAME crow)
 set(LIBRARY_FOLDER crow)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${crow_SOURCE_DIR}/cmake/")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -g -O0")
 
 if(TOKEN)
     add_definitions(-DTOKEN="${TOKEN}")

@@ -1,10 +1,8 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
-#include <wsclient.h>
-
 #include <unistd.h>
-#include <json.h>
+#include <json-c/json.h>
 
 enum game_types {
     GAME = 0,

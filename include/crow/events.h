@@ -1,9 +1,9 @@
 #ifndef _EVENTS_H_
 #define _EVENTS_H_
 
-#include <json.h>
+#include <json-c/json.h>
 
-#include "client.h"
+#include <crow/client.h>
 
 void dispatch(client_t *bot, json_object *data);
 

@@ -1,6 +1,9 @@
-[submodule "deps/libwsclient"]
-	path = deps/libwsclient
-	url = https://github.com/TrueMemer/libwsclient
-[submodule "deps/librequests"]
-	path = deps/librequests
+[submodule "lib/nopoll"]
+	path = lib/nopoll
+	url = https://github.com/ASPLes/nopoll.git
+[submodule "lib/json-c"]
+	path = lib/json-c
+	url = https://github.com/json-c/json-c.git
+[submodule "lib/librequests"]
+	path = lib/librequests
 	url = https://github.com/mossberg/librequests.git

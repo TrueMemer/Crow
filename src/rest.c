@@ -2,8 +2,6 @@
 #include <crow/log.h>
 #include <requests.h>
 
-#define API_ENDPOINT "https://discordapp.com/api"
-
 void
 send_message(char* channel_id, char* text) 
 {
@@ -14,11 +12,29 @@ send_message(char* channel_id, char* text)
 	tosend = json_object_new_object();
 	json_object_object_add(tosend, "content", json_object_new_string(text));
 
-	char target[1024];
-	sprintf(target, "https://discordapp.com/api/channels/%s/messages", channel_id);
+    // char *uri;
+    // asprintf(&uri, "%s/%s/messages", DISCORD_API_CHANNELS, channel_id);
+    // if (uri == NULL)
+    // {
+    //     log_fatal("Asprintf error");
+    //     return;
+    // }
+
+    // char *header;
+    // asprintf(&header, "%s%s", AUTH_HEADER, TOKEN);
+    // if (header == NULL)
+    // {
+    //     log_fatal("Asprintf error");
+    //     return;
+    // }
+
+    
+    char *target;
+    asprintf(&target, "%s/%s/messages", DISCORD_API_CHANNELS, channel_id);
 
     char header[1024];
     sprintf(header, "Authorization: Bot %s", TOKEN);
+
 
     char *auth_header[] = { header };
 
@@ -31,6 +47,48 @@ send_message(char* channel_id, char* text)
 	}
 
     requests_close(&req);
+}
+
+user_t get_user(char *user_id)
+{
+    req_t req;
+    CURL *curl = requests_init(&req);
+
+    char *uri;
+    asprintf(&uri, "%s%s", DISCORD_API_USERS, user_id);
+    if (uri == NULL)
+    {
+        log_fatal("Asprintf error");
+        return;
+    }
+
+    log_debug("Get User endpoint: %s", uri);
+
+    char *header;
+    asprintf(&header, "%s%s", AUTH_HEADER, TOKEN);
+    if (header == NULL)
+    {
+        log_fatal("Asprintf error");
+        return;
+    }
+
+    char *auth_header[] = { header };
+
+    requests_get_headers(curl, &req, uri, auth_header, sizeof(auth_header)/sizeof(char*));
+
+    if (!req.ok)
+    {
+        log_error("Something went wrong");
+        return;
+    }
+
+    log_trace(req.text);
+
+    json_object *output = json_tokener_parse(req.text);
+
+    user_t user_ = user(output);
+
+    return user_;
 }
 
 guild_channel_t

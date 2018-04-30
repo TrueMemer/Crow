@@ -76,23 +76,3 @@ make
 ```
 
 To run bot execute ```./crow```.
-
-
-## Usage
-
-You can create file .crowrc in your home directory with following syntax:
-
-```
-bot_prefix=!!
-token=MjIzMDQyOTM0NjA0MzAwMjg5.DGyFPA.QUJzunfPjC2ajfnj9qSyocsNFAW
-```
-
-Just replace token and bot_prefix with yours.
-
-You can also provide token via argument like this:
-
-```
-./crow --token=MjIzMDQyOTM0NjA0MzAwMjg5.DGyFPA.QUJzunfPjC2ajfnj9qSyocsNFAW
-```
-
-But you can't provide bot prefix this way. There is also flag `-s` which saves current token and bot prefix to your .crowrc file. Default prefix is **??**.

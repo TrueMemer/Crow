@@ -13,7 +13,6 @@ int startsWith(const char *a, const char *b)
 void 
 on_discord_message(client_t *bot, message_t msg) 
 {
-
 	if (strcmp(msg.author.id, bot->self.id)) 
 	{
 		if (startsWith(msg.content, PREFIX)) 
@@ -63,6 +62,17 @@ on_discord_message(client_t *bot, message_t msg)
 				crow_reconnect(bot);
 			}
 
+			if (!strcmp("user", msg.content))
+			{
+				user_t user = get_user("223042934604300289");
+
+				char *to_send;
+
+				asprintf(&to_send, "Username: %s\nDiscriminator: #%s\nBot: %d\n, ID: %s\nAvatar: %s\nMFA: %d", user.username, user.discriminator, user.bot, user.id, user.avatar, user.mfa_enabled);
+			
+				send_message(msg.channel_id, to_send);
+			}
+
 		}
 	}
 
@@ -71,6 +81,11 @@ on_discord_message(client_t *bot, message_t msg)
 int main(void) 
 {
 	client_t *bot = crow_new();
+
+	if (bot == NULL)
+	{
+		return -1;
+	}
 
 	// TODO: map?
 	bot->on_message = &on_discord_message;

@@ -1,12 +1,15 @@
 #ifndef _CLIENT_H_
 #define _CLIENT_H_
 
-#include <wsclient.h>
+#include <nopoll/nopoll.h>
 
-#include "types.h"
+#include <crow/types.h>
 
 typedef struct Client {
-	wsclient *ws;
+	noPollCtx *ctx;
+	noPollConn *conn;
+	//noPollMsg *last_msg;
+	char *last_payload;
     char *session_id;
 	int done;
 	int hello;
